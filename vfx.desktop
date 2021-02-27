@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=VFX
+X-Python-2-Compatible=false
+X-Krita-Manual=vfx_plugin_manual.html
+Name=VFX
+Comment=Various post-processing effect filters.

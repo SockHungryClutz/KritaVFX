@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>VFX Plugin Manual - Krita 4</title>
+    </head>
+    <body>
+        <h1>Visual Effects (VFX) Plugin - Krita 4</h1>
+        <p>Plugin to apply a host of different visual effects seen in post-processing</p>
+        <p>Includes the following effects:</p>
+        <ul>
+            <li>Chromatic Aberration</li>
+            <li>Bloom</li>
+            <li>Pseudo Lens Flare</li>
+            <li>Anamorphic Lens Flare</li>
+        </ul>
+        <h2>How to Install</h2>
+        <ol>
+            <li>Open Krita, go to Settings-&gt;Manage Resources...-&gt;Open Resource Folder</li>
+            <li>Open the pykrita folder inside the folder that pops up</li>
+            <li>Download this repository and save the files and folders exactly as they are to the pykrita folder</li>
+            <li>Close and reopen Krita</li>
+            <li>Go to Settings-&gt;Configure Krita-&gt;Python Plugin Manager</li>
+            <li>Scroll down and enable VFX, click OK to save</li>
+            <li>Close and reopen Krita again</li>
+        </ol>
+        <h2>How to Use</h2>
+        <p>With an open document active, select a layer you want to apply the effect to, then click Tools->Scripts->VFX - (...)  
+This will pop open a window with options to control the effect before applying</p>
+        <p><b>Common Settings:</b></p>
+        <ul>
+            <li>Bias Color - Adds a chosen color to the intermediary results of an operation. This is additive and is used to bring out colors that would otherwise be lacking.</li>
+            <li>Power - Multiplies the result by itself X times, making what would normally be very subtle colors more obvious.</li>
+            <li>Displacement or Strength - How strong a certain stage for an effect will be, how much it will spread across the screen.</li>
+            <li>Bilinear Interpolation - Checking this option will make the plugin run slightly slower, but will make edges created by the effect smoother and less aliased.</li>
+            <li>Number of Worker Threads (FOR ADVANCED USERS) - As the warning says, this option is for users who know what their CPU is capable of. Larger values will apply the effect faster on very large images, but if the value exceeds the number of threads your CPU can reasonably handle the process will take longer. The default value of 4 will work well on the vast majority of CPUs that can handle Krita.</li>
+        </ul>
+        <p>Once the effect is applied it will be placed on a new layer as a modified clone of the previously selected layer, the original layer is preserved.</p>
+        <h2>Planned Features</h2>
+        <p>All listed below are planned to be added to this plugin at some point, no definitive time table or order yet. Check back regularly if you are interested in one or more of these features being added:</p>
+        <ul>
+            <li>Support for more color profiles - currently only supports 8 bit RGBA</li>
+            <li>Help button with detailed description for each widget, on each plugin window</li>
+            <li>New effect - Render Lens Dirt</li>
+            <li>Color swatch picker for bias color</li>
+            <li>Instant preview for any changes</li>
+        </ul>
+        <h3>Extra Notes</h3>
+        <p>This plugin relies on a shared C library for speeding up the computationally expensive parts. The source code for the C libraries is included in the `src` folder and has been precompiled for 32 and 64 bit versions of Windows, Mac OS, and Linux installations of Python. The source code can be compiled using gcc and the below commands:</p>
+        <p>gcc -shared -m32 -o VFXLib_32.so -fPIC VFXWrapper.c LensFlare.c HighPass.c ChromaticAberration.c Utils.c<br />gcc -shared -o VFXLib_64.so -fPIC VFXWrapper.c LensFlare.c HighPass.c ChromaticAberration.c Utils.c</p>
+    </body>
+</html>
