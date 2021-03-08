@@ -153,12 +153,12 @@ class ChromAbWidget(QWidget):
             shape = 1
         else:
             shape = 0
-        settings.setValue("CA_isShapeRadial", self.shape)
+        settings.setValue("CA_isShapeRadial", shape)
         if self.isFalloffExp:
             falloff = 1
         else:
             falloff = 0
-        settings.setValue("CA_isFalloffExp", self.falloff)
+        settings.setValue("CA_isFalloffExp", falloff)
         settings.setValue("CA_direction", self.direction)
         if self.interpolate:
             interp = 1
