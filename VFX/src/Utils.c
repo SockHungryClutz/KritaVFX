@@ -55,6 +55,22 @@ void AddVect4(double* vec1, double* vec2, double* out)
     out[3] = vec1[3] + vec2[3];
 }
 
+// Subtract two 2 dimensional vectors
+void SubVect2(double* vec1, double* vec2, double* out)
+{
+    out[0] = vec1[0] - vec2[0];
+    out[1] = vec1[1] - vec2[1];
+}
+
+// Subtract two 4 dimensional vectors
+void SubVect4(double* vec1, double* vec2, double* out)
+{
+    out[0] = vec1[0] - vec2[0];
+    out[1] = vec1[1] - vec2[1];
+    out[2] = vec1[2] - vec2[2];
+    out[3] = vec1[3] - vec2[3];
+}
+
 // Calculates the length of a 2 dimensional vector
 double LenVect(double* vec)
 {

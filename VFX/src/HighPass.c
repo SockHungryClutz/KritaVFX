@@ -23,7 +23,7 @@ void ApplyPowerOnePixel(
     else if (outVec[2] > 255) outVec[2] = 255;
     outColor->blue = (unsigned char)outVec[0];
     outColor->green = (unsigned char)outVec[1];
-    outColor->red = (unsigned char)outVec[3];
+    outColor->red = (unsigned char)outVec[2];
     outColor->alpha = inColor->alpha;
 }
 
@@ -46,7 +46,7 @@ void ApplyBiasOnePixel(
     else if (outVec[2] > 255) outVec[2] = 255;
     outColor->blue = (unsigned char)outVec[0];
     outColor->green = (unsigned char)outVec[1];
-    outColor->red = (unsigned char)outVec[3];
+    outColor->red = (unsigned char)outVec[2];
     outColor->alpha = inColor->alpha;
 }
 
@@ -114,7 +114,7 @@ void ApplyHighPass(
         else if (outVec[2] > 255) outVec[2] = 255;
         pixOut.blue = (unsigned char)outVec[0];
         pixOut.green = (unsigned char)outVec[1];
-        pixOut.red = (unsigned char)outVec[3];
+        pixOut.red = (unsigned char)outVec[2];
         // TODO: should this always be 255? maybe parameterize?
         pixOut.alpha = pixelData[i].alpha;
         ApplyBiasOnePixel(bias, &pixOut, &(pixelOutData[i]));

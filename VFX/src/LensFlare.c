@@ -8,38 +8,25 @@
 #include "LensFlare.h"
 
 // Helper function for wrapping vectors around edges
-// such that it stays on the same line.
-// This only works on vectors that go through the center
 void WrapVector(
     double* vec,
-    Coords imgSize,
-    double vecSlope)
+    Coords imgSize)
 {
-    if (vecSlope <= 1 && vecSlope >= -1)
+    while (vec[0] >= imgSize.x)
     {
-        while (vec[0] >= imgSize.x)
-        {
-            vec[0] -= imgSize.x;
-            vec[1] -= imgSize.x * vecSlope;
-        }
-        while (vec[0] < 0)
-        {
-            vec[0] += imgSize.x;
-            vec[1] += imgSize.x * vecSlope;
-        }
+        vec[0] -= imgSize.x;
     }
-    else 
+    while (vec[0] < 0)
     {
-        while (vec[1] >= imgSize.y)
-        {
-            vec[1] -= imgSize.y;
-            vec[0] -= imgSize.y * (1 / vecSlope);
-        }
-        while (vec[1] < 0)
-        {
-            vec[1] += imgSize.y;
-            vec[0] += imgSize.y * (1 / vecSlope);
-        }
+        vec[0] += imgSize.x;
+    }
+    while (vec[1] >= imgSize.y)
+    {
+        vec[1] -= imgSize.y;
+    }
+    while (vec[1] < 0)
+    {
+        vec[1] += imgSize.y;
     }
 }
 
@@ -61,7 +48,7 @@ void ApplyPsuedoLensFlare(
 
     for (long long i = start; i < start + n; i++)
     {
-        double baseColor[4];
+        double baseColor[4] = {0,0,0,0};
         double centerPosVec[2]; // From (0,0) to center of image
         double centerDirVec[2]; // From coordVec to center of image
         double coordVec[2];
@@ -70,11 +57,8 @@ void ApplyPsuedoLensFlare(
         centerPosVec[1] = (double)(imgSize.y - 1) / 2;
         coordVec[0] = (double)imgSize.x - x - 1;
         coordVec[1] = (double)imgSize.y - y - 1;
-        GetColorAt(x, y, imgSize.x, imgData, baseColor);
-        ScaleVect2(coordVec, -1.0, scratchVec);
-        AddVect2(centerPosVec, scratchVec, centerDirVec);
+        SubVect2(centerPosVec, coordVec, centerDirVec);
         ScaleVect2(centerDirVec, filterData.artifactDisplacement, centerDirVec);
-        double vecSlope = centerDirVec[1] / centerDirVec[0]; // used for coordinate wrapping
         // Sample light artifacts
         for (int j = 0; j < filterData.artifactCopies; j++)
         {
@@ -82,15 +66,13 @@ void ApplyPsuedoLensFlare(
             ScaleVect2(centerDirVec, (double)j, scratchVec);
             AddVect2(coordVec, scratchVec, offset);
             // Check if offset is out of bounds and wrap
-            WrapVector(offset, imgSize, vecSlope);
+            WrapVector(offset, imgSize);
             double newSample[4];
             SampleAt(offset[0], offset[1], imgSize, pixelData, filterData.bilinearFilter, newSample);
-            ScaleVect2(centerPosVec, -1.0, scratchVec);
-            AddVect2(offset, scratchVec, scratchVec);
+            SubVect2(offset, centerPosVec, scratchVec);
             double weight = LenVect(scratchVec) / LenVect(centerPosVec);
             weight = 1 - weight;
-            weight *= weight;
-            weight *= weight;
+            weight = pow(weight, 10);
             ScaleVect4(newSample, weight, newSample);
             AddVect4(baseColor, newSample, baseColor);
         }
@@ -99,14 +81,11 @@ void ApplyPsuedoLensFlare(
         ScaleVect2(centerDirVec, 1.0 / LenVect(centerDirVec), haloVec);
         ScaleVect2(haloVec, filterData.haloDisplacement, haloVec);
         AddVect2(coordVec, haloVec, haloVec);
-        WrapVector(haloVec, imgSize, vecSlope);
-        ScaleVect2(haloVec, -1.0, scratchVec);
-        AddVect2(centerPosVec, scratchVec, scratchVec);
+        WrapVector(haloVec, imgSize);
+        SubVect2(haloVec, centerPosVec, scratchVec);
         double haloWeight = LenVect(scratchVec) / LenVect(centerPosVec);
         haloWeight = 1 - haloWeight;
-        haloWeight *= haloWeight;
-        haloWeight *= haloWeight;
-        haloWeight *= haloWeight;
+        haloWeight = pow(haloWeight, 5);
         double haloSample[4];
         SampleAt(haloVec[0], haloVec[1], imgSize, pixelData, filterData.bilinearFilter, haloSample);
         ScaleVect4(haloSample, haloWeight, haloSample);

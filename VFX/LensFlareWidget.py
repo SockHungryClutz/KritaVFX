@@ -232,7 +232,6 @@ class PseudoLensFlareWidget(QWidget):
         self.power = 2
         self.interpolate = False
         self.numThreads = 4
-        self.biasColor = [0,0,0,0]
 
         self.threshInfo = QLabel("Threshold: 250", self)
         self.threshold = QSlider(Qt.Horizontal, self)
@@ -270,19 +269,6 @@ class PseudoLensFlareWidget(QWidget):
         self.aberrationSlide.setValue(30)
         self.aberrationSlide.valueChanged.connect(self.updateAberration)
 
-        self.biasInfo = QLabel("Bias Color:", self)
-        self.biasChoice = QButtonGroup(self)
-        self.biasBtn1 = QRadioButton("None")
-        self.biasBtn2 = QRadioButton("Use Foreground")
-        self.biasBtn3 = QRadioButton("Use Background")
-        self.biasChoice.addButton(self.biasBtn1)
-        self.biasChoice.addButton(self.biasBtn2)
-        self.biasChoice.addButton(self.biasBtn3)
-        self.biasBtn1.setChecked(True)
-        self.biasBtn1.pressed.connect(self.changeBias1)
-        self.biasBtn2.pressed.connect(self.changeBias2)
-        self.biasBtn3.pressed.connect(self.changeBias3)
-
         self.powerInfo = QLabel("Power: 1", self)
         self.powerSlide = QSlider(Qt.Horizontal, self)
         self.powerSlide.setRange(0, 10)
@@ -311,10 +297,6 @@ class PseudoLensFlareWidget(QWidget):
         vbox.addWidget(self.blurSlide)
         vbox.addWidget(self.aberrationInfo)
         vbox.addWidget(self.aberrationSlide)
-        vbox.addWidget(self.biasInfo)
-        vbox.addWidget(self.biasBtn1)
-        vbox.addWidget(self.biasBtn2)
-        vbox.addWidget(self.biasBtn3)
         vbox.addWidget(self.powerInfo)
         vbox.addWidget(self.powerSlide)
         vbox.addWidget(self.biFilter)
@@ -348,15 +330,6 @@ class PseudoLensFlareWidget(QWidget):
     def updateAberration(self, value):
         self.aberrationInfo.setText("Aberration strength: " + str(value) + "px")
         self.aberrationStrength = value
-
-    def changeBias1(self):
-        self.biasColor = [0,0,0,0]
-
-    def changeBias2(self):
-        self.biasColor = Krita.instance().activeWindow().activeView().foregroundColor().componentsOrdered()
-
-    def changeBias3(self):
-        self.biasColor = Krita.instance().activeWindow().activeView().backgroundColor().componentsOrdered()
 
     def updatePower(self, value):
         self.powerInfo.setText("Power: " + str(value))
@@ -422,15 +395,13 @@ class PseudoLensFlareWidget(QWidget):
 
     # Call into C library to process the image
     def applyFilter(self, imgData, imgSize):
-        # Anamorphic Lens Flare is in 2 steps: threshold, then blur
         newData = create_string_buffer(imgSize[0] * imgSize[1] * 4)
         newData2 = create_string_buffer(imgSize[0] * imgSize[1] * 4)
         dll = GetSharedLibrary()
         imgCoords = Coords(imgSize[0], imgSize[1])
         # python makes it hard to get a pointer to existing buffers for some reason
         cimgData = c_char * len(imgData)
-        bias = Pixel(int(self.biasColor[0] * 255), int(self.biasColor[1] * 255),
-                    int(self.biasColor[2] * 255), int(self.biasColor[3] * 255))
+        bias = Pixel(0, 0, 0, 0)
         # since this is the one filter with an actual pipeline:
         # highpass->pseudoflare->chromatic aberration then blur afterwords
         # Do sequentially because each stage depends on the last
@@ -492,24 +463,3 @@ class PseudoLensFlareWidget(QWidget):
         blurConfig.setProperty("halfHeight", self.blurStrength)
         blurFilter.setConfiguration(blurConfig)
         blurFilter.apply(node, 0, 0, doc.width(), doc.height())
-        # need to remake stuff again for one last filter
-        #dll = GetSharedLibrary()
-        #imgData = node.projectionPixelData(0, 0, doc.width(), doc.height())
-        #imgSize = Coords(doc.width(), doc.height())
-        #cimgData = c_char * len(imgData)
-        #newData = create_string_buffer(imgSize.x * imgSize.y * 4)
-        #threadPool = []
-        #idx = 0
-        #power = Pixel(self.power, self.power, self.power, self.power)
-        #for i in range(self.numThreads):
-        #    numPixels = (imgSize.x * imgSize.y) // self.numThreads
-        #    if i == self.numThreads - 1:
-        #        numPixels = (imgSize.x * imgSize.y) - idx # Give the last thread the remainder
-        #    workerThread = Thread(target=dll.VFXBias, args=(idx, numPixels, power,
-        #                            imgSize, cimgData.from_buffer(imgData), byref(newData),))
-        #    threadPool.append(workerThread)
-        #    threadPool[i].start()
-        #    idx += numPixels
-        #for i in range(self.numThreads):
-        #    threadPool[i].join()
-        #node.setPixelData(bytes(newData), 0, 0, doc.width(), doc.height())

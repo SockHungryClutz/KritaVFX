@@ -40,6 +40,12 @@ void AddVect2(double* vec1, double* vec2, double* out);
 // Sum two 4 dimensional vectors
 void AddVect4(double* vec1, double* vec2, double* out);
 
+// Subtract two 2 dimensional vectors
+void SubVect2(double* vec1, double* vec2, double* out);
+
+// Subtract two 4 dimensional vectors
+void SubVect4(double* vec1, double* vec2, double* out);
+
 // Calculates the length of a 2 dimensional vector
 double LenVect(double* vec);
 
