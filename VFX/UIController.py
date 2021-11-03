@@ -74,9 +74,8 @@ class UIController(object):
             resultData = self.filterWidget.applyFilter(curNode.projectionPixelData(0, 0, doc.width(), doc.height()), (doc.width(), doc.height()))
             curNode.setPixelData(resultData, 0, 0, doc.width(), doc.height())
             curNode.setBlendingMode(self.filterWidget.getBlendMode())
-            if self.filterWidget.requirePostCall():
-                # There's more to be done, pass in Krita stuff
-                self.filterWidget.postFilter(app, doc, curNode)
+            # This will be no-op if there's nothing to do
+            self.filterWidget.postFilter(app, doc, curNode)
             doc.rootNode().addChildNode(curNode, doc.activeNode())
             doc.refreshProjection()
             self.saveSettings()

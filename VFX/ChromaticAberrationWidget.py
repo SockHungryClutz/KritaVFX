@@ -14,7 +14,7 @@ class ChromAbWidget(QWidget):
     def __init__(self, parent=None):
         super(ChromAbWidget, self).__init__(parent)
 
-        self.maxD = 20
+        self.maxD = 0.01
         self.deadZ = 5
         self.isShapeRadial = True
         self.isFalloffExp = True
@@ -40,10 +40,10 @@ class ChromAbWidget(QWidget):
         self.theDial.setEnabled(False)
         self.theDial.valueChanged.connect(self.updateDial)
 
-        self.maxInfo = QLabel("Max Displacement: 20px", self)
+        self.maxInfo = QLabel("Max Displacement: 1%", self)
         self.maxDisplace = QSlider(Qt.Horizontal, self)
-        self.maxDisplace.setRange(1, 300)
-        self.maxDisplace.setValue(20)
+        self.maxDisplace.setRange(1, 500)
+        self.maxDisplace.setValue(10)
         self.maxDisplace.valueChanged.connect(self.updateMax)
 
         self.falloffInfo = QLabel("Falloff:", self)
@@ -92,8 +92,8 @@ class ChromAbWidget(QWidget):
 
     # Update labels and members
     def updateMax(self, value):
-        self.maxInfo.setText("Max Displacement: " + str(value) + "px")
-        self.maxD = value
+        self.maxInfo.setText("Max Displacement: " + str(value / 10) + "%")
+        self.maxD = value / 1000
 
     def updateDead(self, value):
         self.deadInfo.setText("Deadzone: " + str(value) + "%")
@@ -147,7 +147,7 @@ class ChromAbWidget(QWidget):
         return "Chromatic Aberration"
 
     def saveSettings(self, settings):
-        settings.setValue("CA_maxD", self.maxD)
+        settings.setValue("CA_maxD", self.maxD * 1000)
         settings.setValue("CA_deadZ", self.deadZ)
         if self.isShapeRadial:
             shape = 1
@@ -168,7 +168,7 @@ class ChromAbWidget(QWidget):
         settings.setValue("CA_numThreads", self.numThreads)
 
     def readSettings(self, settings):
-        self.updateMax(int(settings.value("CA_maxD", 20)))
+        self.updateMax(int(settings.value("CA_maxD", 10)))
         self.updateDead(int(settings.value("CA_deadZ", 5)))
         shapeRadial = int(settings.value("CA_isShapeRadial", 1))
         if shapeRadial == 1:
@@ -191,7 +191,7 @@ class ChromAbWidget(QWidget):
         self.theDial.setValue(self.direction)
         self.shapeBtn1.setChecked(self.isShapeRadial)
         self.shapeBtn2.setChecked(not self.isShapeRadial)
-        self.maxDisplace.setValue(self.maxD)
+        self.maxDisplace.setValue(self.maxD * 1000)
         self.foBtn1.setChecked(self.isFalloffExp)
         self.foBtn2.setChecked(not self.isFalloffExp)
         self.deadzone.setValue(self.deadZ)
@@ -204,9 +204,6 @@ class ChromAbWidget(QWidget):
 
     def getBlendMode(self):
         return "normal"
-
-    def requirePostCall(self):
-        return False
 
     # Call into C library to process the image
     def applyFilter(self, imgData, imgSize):
@@ -223,9 +220,9 @@ class ChromAbWidget(QWidget):
             falloff = 0
             if self.isFalloffExp:
                 falloff = 1
-            filterSettings = RadialFilterData(self.maxD, self.deadZ, falloff, interp)
+            filterSettings = RadialFilterData(int(self.maxD * imgSize[0]), self.deadZ, falloff, interp)
         else:
-            filterSettings = LinearFilterData(self.maxD, self.direction, interp)
+            filterSettings = LinearFilterData(int(self.maxD * imgSize[0]), self.direction, interp)
         idx = 0
         for i in range(self.numThreads):
             numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
@@ -245,3 +242,6 @@ class ChromAbWidget(QWidget):
         for i in range(self.numThreads):
             threadPool[i].join()
         return bytes(newData)
+
+    def postFilter(self, app, doc, node):
+        pass

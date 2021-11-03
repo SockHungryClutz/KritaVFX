@@ -15,7 +15,7 @@ class BloomWidget(QWidget):
         super(BloomWidget, self).__init__(parent)
 
         self.thresh = 240
-        self.blurStrength = 10
+        self.blurStrength = 0.05
         self.power = 2
         self.numThreads = 4
         self.biasColor = [0,0,0,0]
@@ -26,9 +26,9 @@ class BloomWidget(QWidget):
         self.threshold.setValue(230)
         self.threshold.valueChanged.connect(self.updateThresh)
 
-        self.blurInfo = QLabel("Blur strength: 50px", self)
+        self.blurInfo = QLabel("Blur strength: 5%", self)
         self.blurSlide = QSlider(Qt.Horizontal, self)
-        self.blurSlide.setRange(1, 300)
+        self.blurSlide.setRange(1, 500)
         self.blurSlide.setValue(50)
         self.blurSlide.valueChanged.connect(self.updateBlur)
 
@@ -80,8 +80,8 @@ class BloomWidget(QWidget):
         self.thresh = value
 
     def updateBlur(self, value):
-        self.blurInfo.setText("Blur Strength: " + str(value) + "px")
-        self.blurStrength = value
+        self.blurInfo.setText("Blur Strength: " + str(value / 10) + "%")
+        self.blurStrength = value / 1000
 
     def changeBias1(self):
         self.biasColor = [0,0,0,0]
@@ -106,7 +106,7 @@ class BloomWidget(QWidget):
 
     def saveSettings(self, settings):
         settings.setValue("B_thresh", self.thresh)
-        settings.setValue("B_blurStrength", self.blurStrength)
+        settings.setValue("B_blurStrength", self.blurStrength * 1000)
         settings.setValue("B_power", self.power)
         settings.setValue("B_numThreads", self.numThreads)
 
@@ -117,15 +117,12 @@ class BloomWidget(QWidget):
         self.updateThread(int(settings.value("B_numThreads", 4)))
         # Update interactable UI elements
         self.threshold.setValue(self.thresh)
-        self.blurSlide.setValue(self.blurStrength)
+        self.blurSlide.setValue(self.blurStrength * 1000)
         self.powerSlide.setValue(self.power)
         self.workThreads.setValue(self.numThreads)
 
     def getBlendMode(self):
         return "add"
-
-    def requirePostCall(self):
-        return True
 
     # Call into C library to process the image
     def applyFilter(self, imgData, imgSize):
@@ -158,8 +155,8 @@ class BloomWidget(QWidget):
     def postFilter(self, app, doc, node):
         blurFilter = app.filter("blur")
         blurConfig = blurFilter.configuration()
-        blurConfig.setProperty("halfHeight", self.blurStrength)
-        blurConfig.setProperty("halfWidth", self.blurStrength)
+        blurConfig.setProperty("halfHeight", self.blurStrength * doc.width())
+        blurConfig.setProperty("halfWidth", self.blurStrength * doc.width())
         blurFilter.setConfiguration(blurConfig)
         blurFilter.apply(node, 0, 0, doc.width(), doc.height())
         # need to remake stuff again for one last filter

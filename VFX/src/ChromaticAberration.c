@@ -78,11 +78,7 @@ void ApplyLinearAberration(
         // Do the thing
         ApplyOnePixel(xy, vec, imgSize, pixelData, filterData.biFilter, outVec);
         // There's no way this could happen, but just in case...
-        for (int j = 0; j < 4; j++)
-        {
-            if (outVec[j] > 255) outVec[j] = 255;
-            else if (outVec[j] < 0) outVec[j] = 0;
-        }
+        ClampVect4(outVec);
         pixelOut[i].blue = (unsigned int)outVec[0];
         pixelOut[i].green = (unsigned int)outVec[1];
         pixelOut[i].red = (unsigned int)outVec[2];
