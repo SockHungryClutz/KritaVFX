@@ -238,7 +238,7 @@ class ChromAbWidget(QWidget):
             threadPool[i].start()
             idx += numPixels
         # Join threads to finish
-        # If a crash happens, it would freeze here. User can still cancel tho
+        # If a crash happens, it would freeze here. User can still cancel though
         for i in range(self.numThreads):
             threadPool[i].join()
         return bytes(newData)

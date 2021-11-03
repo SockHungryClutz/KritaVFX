@@ -18,7 +18,6 @@ class AnamorphicLensFlareWidget(QWidget):
         self.isHorizontal = True
         self.power = 10
         self.numThreads = 4
-        self.biasColor = [0,0,0,0]
 
         self.threshInfo = QLabel("Threshold: 250", self)
         self.threshold = QSlider(Qt.Horizontal, self)
@@ -42,19 +41,6 @@ class AnamorphicLensFlareWidget(QWidget):
         self.shapeBtn1.pressed.connect(self.changeShape1)
         self.shapeBtn2.pressed.connect(self.changeShape2)
 
-        self.biasInfo = QLabel("Bias Color:", self)
-        self.biasChoice = QButtonGroup(self)
-        self.biasBtn1 = QRadioButton("None")
-        self.biasBtn2 = QRadioButton("Use Foreground")
-        self.biasBtn3 = QRadioButton("Use Background")
-        self.biasChoice.addButton(self.biasBtn1)
-        self.biasChoice.addButton(self.biasBtn2)
-        self.biasChoice.addButton(self.biasBtn3)
-        self.biasBtn1.setChecked(True)
-        self.biasBtn1.pressed.connect(self.changeBias1)
-        self.biasBtn2.pressed.connect(self.changeBias2)
-        self.biasBtn3.pressed.connect(self.changeBias3)
-
         self.powerInfo = QLabel("Power: 10", self)
         self.powerSlide = QSlider(Qt.Horizontal, self)
         self.powerSlide.setRange(0, 25)
@@ -75,10 +61,6 @@ class AnamorphicLensFlareWidget(QWidget):
         vbox.addWidget(self.shapeInfo)
         vbox.addWidget(self.shapeBtn1)
         vbox.addWidget(self.shapeBtn2)
-        vbox.addWidget(self.biasInfo)
-        vbox.addWidget(self.biasBtn1)
-        vbox.addWidget(self.biasBtn2)
-        vbox.addWidget(self.biasBtn3)
         vbox.addWidget(self.powerInfo)
         vbox.addWidget(self.powerSlide)
         vbox.addWidget(self.threadInfo)
@@ -101,15 +83,6 @@ class AnamorphicLensFlareWidget(QWidget):
 
     def changeShape2(self):
         self.isHorizontal = False
-
-    def changeBias1(self):
-        self.biasColor = [0,0,0,0]
-
-    def changeBias2(self):
-        self.biasColor = Krita.instance().activeWindow().activeView().foregroundColor().componentsOrdered()
-
-    def changeBias3(self):
-        self.biasColor = Krita.instance().activeWindow().activeView().backgroundColor().componentsOrdered()
 
     def updatePower(self, value):
         self.powerInfo.setText("Power: " + str(value))
@@ -164,8 +137,7 @@ class AnamorphicLensFlareWidget(QWidget):
         imgCoords = Coords(imgSize[0], imgSize[1])
         # python makes it hard to get a pointer to existing buffers for some reason
         cimgData = c_char * len(imgData)
-        bias = Pixel(int(self.biasColor[0] * 255), int(self.biasColor[1] * 255),
-                    int(self.biasColor[2] * 255), int(self.biasColor[3] * 255))
+        bias = Pixel(0, 0, 0, 0)
         threadPool = []
         idx = 0
         for i in range(self.numThreads):

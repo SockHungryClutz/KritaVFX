@@ -34,13 +34,6 @@ class VFX(Extension):
         self.uiController.initialize(self, "AF")
 
     def createActions(self, window):
-        """
-        TODO:
-        Actions for each different filter, each might need their own UI?
-        Or use same UIController, but need to tell which widget to use.
-        Use different instances of UIControllers so they don't collide?
-        Pass a bundle of stuff to init it probably, like title
-        """
         chromAction = window.createAction("OpenChtomaticAberrationFilter", "VFX - Chromatic Aberration")
         chromAction.triggered.connect(self.ChromaticAberrationWindow)
         bloomAction = window.createAction("OpenBloomFilter", "VFX - Bloom")

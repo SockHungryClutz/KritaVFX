@@ -18,7 +18,6 @@ class BloomWidget(QWidget):
         self.blurStrength = 0.05
         self.power = 2
         self.numThreads = 4
-        self.biasColor = [0,0,0,0]
 
         self.threshInfo = QLabel("Threshold: 230", self)
         self.threshold = QSlider(Qt.Horizontal, self)
@@ -31,19 +30,6 @@ class BloomWidget(QWidget):
         self.blurSlide.setRange(1, 500)
         self.blurSlide.setValue(50)
         self.blurSlide.valueChanged.connect(self.updateBlur)
-
-        self.biasInfo = QLabel("Bias Color:", self)
-        self.biasChoice = QButtonGroup(self)
-        self.biasBtn1 = QRadioButton("None")
-        self.biasBtn2 = QRadioButton("Use Foreground")
-        self.biasBtn3 = QRadioButton("Use Background")
-        self.biasChoice.addButton(self.biasBtn1)
-        self.biasChoice.addButton(self.biasBtn2)
-        self.biasChoice.addButton(self.biasBtn3)
-        self.biasBtn1.setChecked(True)
-        self.biasBtn1.pressed.connect(self.changeBias1)
-        self.biasBtn2.pressed.connect(self.changeBias2)
-        self.biasBtn3.pressed.connect(self.changeBias3)
 
         self.powerInfo = QLabel("Power: 2", self)
         self.powerSlide = QSlider(Qt.Horizontal, self)
@@ -62,10 +48,6 @@ class BloomWidget(QWidget):
         vbox.addWidget(self.threshold)
         vbox.addWidget(self.blurInfo)
         vbox.addWidget(self.blurSlide)
-        vbox.addWidget(self.biasInfo)
-        vbox.addWidget(self.biasBtn1)
-        vbox.addWidget(self.biasBtn2)
-        vbox.addWidget(self.biasBtn3)
         vbox.addWidget(self.powerInfo)
         vbox.addWidget(self.powerSlide)
         vbox.addWidget(self.threadInfo)
@@ -82,15 +64,6 @@ class BloomWidget(QWidget):
     def updateBlur(self, value):
         self.blurInfo.setText("Blur Strength: " + str(value / 10) + "%")
         self.blurStrength = value / 1000
-
-    def changeBias1(self):
-        self.biasColor = [0,0,0,0]
-
-    def changeBias2(self):
-        self.biasColor = Krita.instance().activeWindow().activeView().foregroundColor().componentsOrdered()
-
-    def changeBias3(self):
-        self.biasColor = Krita.instance().activeWindow().activeView().backgroundColor().componentsOrdered()
 
     def updatePower(self, value):
         self.powerInfo.setText("Power: " + str(value))
@@ -132,8 +105,7 @@ class BloomWidget(QWidget):
         imgCoords = Coords(imgSize[0], imgSize[1])
         # python makes it hard to get a pointer to existing buffers for some reason
         cimgData = c_char * len(imgData)
-        bias = Pixel(int(self.biasColor[0] * 255), int(self.biasColor[1] * 255),
-                    int(self.biasColor[2] * 255), int(self.biasColor[3] * 255))
+        bias = Pixel(0, 0, 0, 0)
         threadPool = []
         idx = 0
         for i in range(self.numThreads):
