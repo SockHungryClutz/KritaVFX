@@ -105,14 +105,13 @@ class BloomWidget(QWidget):
         imgCoords = Coords(imgSize[0], imgSize[1])
         # python makes it hard to get a pointer to existing buffers for some reason
         cimgData = c_char * len(imgData)
-        bias = Pixel(0, 0, 0, 0)
         threadPool = []
         idx = 0
         for i in range(self.numThreads):
             numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
             if i == self.numThreads - 1:
                 numPixels = (imgSize[0] * imgSize[1]) - idx # Give the last thread the remainder
-            workerThread = Thread(target=dll.VFXHighPass, args=(idx, numPixels, self.thresh, bias,
+            workerThread = Thread(target=dll.VFXHighPass, args=(idx, numPixels, self.thresh,
                                     imgCoords, cimgData.from_buffer(imgData), byref(newData),))
             threadPool.append(workerThread)
             threadPool[i].start()

@@ -2,7 +2,6 @@
  * HighPass.h
  * Apply a simple highpass filter (not gaussian)
  * And some other misc functions...
- * Bias  = add colors
  * Power = integer multiply (not float multiply)
  **/
 
@@ -19,19 +18,10 @@ void ApplyPower(
     void* imgData,
     void* outData);
 
-void ApplyBias(
-    long long start,
-    long long n,
-    Pixel bias,
-    Coords imgSize,
-    void* imgData,
-    void* outData);
-
 void ApplyHighPass(
     long long start,
     long long n,
     int threshold,
-    Pixel bias,
     Coords imgSize,
     void* imgData,
     void* outData);

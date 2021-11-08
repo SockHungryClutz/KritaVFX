@@ -62,7 +62,6 @@ def GetSharedLibrary():
     dll.VFXLinearAberration.argtypes = [c_longlong, c_longlong, LinearFilterData, Coords, c_void_p, c_void_p]
     dll.VFXRadialAberration.argtypes = [c_longlong, c_longlong, RadialFilterData, Coords, c_void_p, c_void_p]
     dll.VFXPsuedoLensFlare.argtypes = [c_longlong, c_longlong, LensFlareFilterData, Coords, c_void_p, c_void_p]
-    dll.VFXBias.argtypes = [c_longlong, c_longlong, Pixel, Coords, c_void_p, c_void_p]
     dll.VFXPower.argtypes = [c_longlong, c_longlong, Pixel, Coords, c_void_p, c_void_p]
-    dll.VFXHighPass.argtypes = [c_longlong, c_longlong, c_int, Pixel, Coords, c_void_p, c_void_p]
+    dll.VFXHighPass.argtypes = [c_longlong, c_longlong, c_int, Coords, c_void_p, c_void_p]
     return dll

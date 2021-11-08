@@ -52,25 +52,13 @@ void VFXPower(
     ApplyPower(start, n, power, imgSize, imgData, outData);
 }
 
-void VFXBias(
-    long long start,
-    long long n,
-    Pixel bias,
-    Coords imgSize,
-    void* imgData,
-    void* outData)
-{
-    ApplyBias(start, n, bias, imgSize, imgData, outData);
-}
-
 void VFXHighPass(
     long long start,
     long long n,
     int threshold,
-    Pixel bias,
     Coords imgSize,
     void* imgData,
     void* outData)
 {
-    ApplyHighPass(start, n, threshold, bias, imgSize, imgData, outData);
+    ApplyHighPass(start, n, threshold, imgSize, imgData, outData);
 }

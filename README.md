@@ -43,7 +43,6 @@ All listed below are planned to be added to this plugin at some point, no defini
 * Support for more color profiles - currently only supports 8 bit RGBA
 * Help button with detailed description for each widget, on each plugin window
 * New effect - Render Lens Dirt
-* Color swatch picker for bias color
 * Instant preview for any changes
 
 ### Extra Notes
