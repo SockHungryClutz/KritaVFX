@@ -47,7 +47,7 @@ All listed below are planned to be added to this plugin at some point, no defini
 
 ### Extra Notes
 
-This plugin relies on a shared C library for speeding up the computationally expensive parts. The source code for the C libraries is included in the `VFX/src` folder and has been precompiled for 32 and 64 bit versions of Windows, Mac OS, and Linux installations of Python. The source code can be compiled using gcc and the below commands:
+This plugin relies on a shared C library for speeding up the computationally expensive parts. The source code for the C libraries is included in the `VFX/src` folder and has been precompiled for 32 and 64 bit versions of Windows, Mac OS, and Linux (Ubuntu) installations of Python. The source code can be compiled using gcc and the below commands:
 
 ```
 gcc -shared -m32 -o VFXLib_32.so -fPIC VFXWrapper.c LensFlare.c HighPass.c ChromaticAberration.c Utils.c

@@ -9,24 +9,24 @@
 
 // Helper function for wrapping vectors around edges
 void WrapVector(
-    double* vec,
+    Vect2 vec,
     Coords imgSize)
 {
-    while (vec[0] >= imgSize.x)
+    while (vec.a >= imgSize.x)
     {
-        vec[0] -= imgSize.x;
+        vec.a -= imgSize.x;
     }
-    while (vec[0] < 0)
+    while (vec.a < 0)
     {
-        vec[0] += imgSize.x;
+        vec.a += imgSize.x;
     }
-    while (vec[1] >= imgSize.y)
+    while (vec.b >= imgSize.y)
     {
-        vec[1] -= imgSize.y;
+        vec.b -= imgSize.y;
     }
-    while (vec[1] < 0)
+    while (vec.b < 0)
     {
-        vec[1] += imgSize.y;
+        vec.b += imgSize.y;
     }
 }
 
@@ -48,55 +48,59 @@ void ApplyPsuedoLensFlare(
 
     for (long long i = start; i < start + n; i++)
     {
-        double baseColor[4] = {0,0,0,0};
-        double centerPosVec[2]; // From (0,0) to center of image
-        double centerDirVec[2]; // From coordVec to center of image
-        double coordVec[2];
-        double scratchVec[2]; // Memory on the stack just for computation
-        centerPosVec[0] = (double)(imgSize.x - 1) / 2;
-        centerPosVec[1] = (double)(imgSize.y - 1) / 2;
-        coordVec[0] = (double)imgSize.x - x - 1;
-        coordVec[1] = (double)imgSize.y - y - 1;
-        SubVect2(centerPosVec, coordVec, centerDirVec);
-        ScaleVect2(centerDirVec, filterData.artifactDisplacement, centerDirVec);
+        Vect4 baseColor = {0,0,0,0};
+        Vect2 centerPosVec; // From (0,0) to center of image
+        Vect2 centerDirVec; // From coordVec to center of image
+        Vect2 coordVec;
+        Vect2 scratchVec; // Memory on the stack just for computation
+        centerPosVec.a = (double)(imgSize.x - 1) / 2;
+        centerPosVec.b = (double)(imgSize.y - 1) / 2;
+        coordVec.a = (double)imgSize.x - x - 1;
+        coordVec.b = (double)imgSize.y - y - 1;
+        centerDirVec = SubVect2(centerPosVec, coordVec);
+        centerDirVec = ScaleVect2(centerDirVec, filterData.artifactDisplacement);
         // Sample light artifacts
         for (int j = 0; j < filterData.artifactCopies; j++)
         {
-            double offset[2];
-            ScaleVect2(centerDirVec, (double)j, scratchVec);
-            AddVect2(coordVec, scratchVec, offset);
+            Vect2 offset;
+            scratchVec = ScaleVect2(centerDirVec, (double)j);
+            offset = AddVect2(coordVec, scratchVec);
             // Check if offset is out of bounds and wrap
             WrapVector(offset, imgSize);
-            double newSample[4];
-            SampleAt(offset[0], offset[1], imgSize, pixelData, filterData.bilinearFilter, newSample);
-            SubVect2(offset, centerPosVec, scratchVec);
+            Vect4 newSample;
+            newSample = SampleAt(offset.a, offset.b, imgSize, pixelData, filterData.bilinearFilter);
+            scratchVec = SubVect2(offset, centerPosVec);
+            double alpha = newSample.d / 255.0;
             double weight = LenVect(scratchVec) / LenVect(centerPosVec);
             weight = 1 - weight;
             weight = pow(weight, 10);
-            ScaleVect4(newSample, weight, newSample);
-            AddVect4(baseColor, newSample, baseColor);
+            newSample = ScaleVect4(newSample, weight);
+            newSample = ScaleVect4(newSample, alpha);
+            baseColor = AddVect4(baseColor, newSample);
         }
         // Sample halo effect
-        double haloVec[2];
-        ScaleVect2(centerDirVec, 1.0 / LenVect(centerDirVec), haloVec);
-        ScaleVect2(haloVec, filterData.haloDisplacement, haloVec);
-        AddVect2(coordVec, haloVec, haloVec);
+        Vect2 haloVec;
+        haloVec = ScaleVect2(centerDirVec, 1.0 / LenVect(centerDirVec));
+        haloVec = ScaleVect2(haloVec, filterData.haloDisplacement);
+        haloVec = AddVect2(coordVec, haloVec);
         WrapVector(haloVec, imgSize);
-        SubVect2(haloVec, centerPosVec, scratchVec);
+        scratchVec = SubVect2(haloVec, centerPosVec);
         double haloWeight = LenVect(scratchVec) / LenVect(centerPosVec);
         haloWeight = 1 - haloWeight;
         haloWeight = pow(haloWeight, 5);
-        double haloSample[4];
-        SampleAt(haloVec[0], haloVec[1], imgSize, pixelData, filterData.bilinearFilter, haloSample);
-        ScaleVect4(haloSample, haloWeight, haloSample);
-        AddVect4(baseColor, haloSample, baseColor);
+        Vect4 haloSample;
+        haloSample = SampleAt(haloVec.a, haloVec.b, imgSize, pixelData, filterData.bilinearFilter);
+        double haloAlpha = haloSample.d / 255.0;
+        haloSample = ScaleVect4(haloSample, haloWeight);
+        haloSample = ScaleVect4(haloSample, haloAlpha);
+        baseColor = AddVect4(baseColor, haloSample);
         // Power, clamp, then return
-        ScaleVect4(baseColor, filterData.power, baseColor);
+        baseColor = ScaleVect4(baseColor, filterData.power);
         ClampVect4(baseColor);
-        pixelOut[i].blue = (unsigned char)baseColor[0];
-        pixelOut[i].green = (unsigned char)baseColor[1];
-        pixelOut[i].red = (unsigned char)baseColor[2];
-        pixelOut[i].alpha = (unsigned char)baseColor[3];
+        pixelOut[i].blue = (unsigned char)baseColor.a;
+        pixelOut[i].green = (unsigned char)baseColor.b;
+        pixelOut[i].red = (unsigned char)baseColor.c;
+        pixelOut[i].alpha = (unsigned char)255;
 
         x++;
         if (x >= imgSize.x)

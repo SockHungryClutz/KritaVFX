@@ -28,26 +28,42 @@ typedef struct
     long long y;
 } Coords;
 
+// 2 dimensional vector of doubles
+typedef struct
+{
+    double a;
+    double b;
+} Vect2;
+
+// 4 dimensional vector of doubles
+typedef struct
+{
+    double a;
+    double b;
+    double c;
+    double d;
+} Vect4;
+
 // Scale a 2 dimensional vector
-void ScaleVect2(double* vec, double scalar, double* out);
+Vect2 ScaleVect2(Vect2 vec, double scalar);
 
 // Scale a 4 dimensional vector
-void ScaleVect4(double* vec, double scalar, double* out);
+Vect4 ScaleVect4(Vect4 vec, double scalar);
 
 // Sum two 2 dimensional vectors
-void AddVect2(double* vec1, double* vec2, double* out);
+Vect2 AddVect2(Vect2 vec1, Vect2 vec2);
 
 // Sum two 4 dimensional vectors
-void AddVect4(double* vec1, double* vec2, double* out);
+Vect4 AddVect4(Vect4 vec1, Vect4 vec2);
 
 // Subtract two 2 dimensional vectors
-void SubVect2(double* vec1, double* vec2, double* out);
+Vect2 SubVect2(Vect2 vec1, Vect2 vec2);
 
 // Subtract two 4 dimensional vectors
-void SubVect4(double* vec1, double* vec2, double* out);
+Vect4 SubVect4(Vect4 vec1, Vect4 vec2);
 
 // Calculates the length of a 2 dimensional vector
-double LenVect(double* vec);
+double LenVect(Vect2 vec);
 
 // Possibly other functions here? Unitize, etc?
 
@@ -56,24 +72,22 @@ double DegreeToRadian(double deg);
 double Max(double a, double b);
 
 // Returns the color at a certain point in the image data
-void GetColorAt(
+Vect4 GetColorAt(
     long long x,
     long long y,
     long long imgWidth,
-    Pixel* imgData,
-    double* out);
+    Pixel* imgData);
 
 // Get a sample at the specified coordinates
 // Performs bounds clamping and bilinear interpolation
-void SampleAt(
+Vect4 SampleAt(
     double x,
     double y,
     Coords imgSize,
     Pixel* imgData,
-    char interpolate,
-    double* out);
+    char interpolate);
 
 // Clamp a vector to standard 8 bit values
-void ClampVect4(double* vec);
+void ClampVect4(Vect4 vec);
 
 #endif // ifndef _UTILS_H_

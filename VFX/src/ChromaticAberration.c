@@ -8,29 +8,28 @@
 #include "ChromaticAberration.h"
 
 // Applies the effect to a single pixel
-void ApplyOnePixel(
+Vect4 ApplyOnePixel(
     Coords xy,
-    double* vec,
+    Vect2 vec,
     Coords imgSize,
     Pixel* imgData,
-    char interpolate,
-    double* out)
+    char interpolate)
 {
-    double baseColor[4];
-    double redChannel[4];
-    double blueChannel[4];
-    double vecCoords[2];
-    double negativeVec[2];
+    Vect4 baseColor;
+    Vect4 redChannel;
+    Vect4 blueChannel;
 
-    GetColorAt(xy.x, xy.y, imgSize.x, imgData, baseColor);
-    SampleAt(xy.x + vec[0], xy.y + vec[1], imgSize, imgData, interpolate, redChannel);
-    SampleAt(xy.x - vec[0], xy.y - vec[1], imgSize, imgData, interpolate, blueChannel);
-    double transparency = (baseColor[3] + redChannel[3] + blueChannel[3]) / 3;
+    baseColor = GetColorAt(xy.x, xy.y, imgSize.x, imgData);
+    redChannel = SampleAt(xy.x + vec.a, xy.y + vec.b, imgSize, imgData, interpolate);
+    blueChannel = SampleAt(xy.x - vec.a, xy.y - vec.b, imgSize, imgData, interpolate);
+    double transparency = (baseColor.d + redChannel.d + blueChannel.d) / 3;
 
-    out[0] = redChannel[0];
-    out[1] = baseColor[1];
-    out[2] = blueChannel[2];
-    out[3] = transparency;
+    Vect4 out;
+    out.a = redChannel.a;
+    out.b = baseColor.b;
+    out.c = blueChannel.c;
+    out.d = transparency;
+    return out;
 }
 
 // Applies a linear aberration over a set of n pixels
@@ -48,11 +47,11 @@ void ApplyLinearAberration(
     Pixel* pixelOut = (Pixel*)outData;
 
     // Calculate vector to use for every pixel
-    double vec[2];
+    Vect2 vec;
     double rad = DegreeToRadian(filterData.direction);
-    vec[0] = -1 * sin(rad);
-    vec[1] = cos(rad);
-    ScaleVect2(vec, filterData.power, vec);
+    vec.a = -1 * sin(rad);
+    vec.b = cos(rad);
+    vec = ScaleVect2(vec, filterData.power);
 
     // Iterate over range of pixels, applying effect for each
     long long x = start % imgSize.x;
@@ -73,16 +72,16 @@ void ApplyLinearAberration(
         xy.y = y;
 
         // Allocate output vector
-        double outVec[4];
+        Vect4 outVec;
 
         // Do the thing
-        ApplyOnePixel(xy, vec, imgSize, pixelData, filterData.biFilter, outVec);
+        outVec = ApplyOnePixel(xy, vec, imgSize, pixelData, filterData.biFilter);
         // There's no way this could happen, but just in case...
         ClampVect4(outVec);
-        pixelOut[i].blue = (unsigned int)outVec[0];
-        pixelOut[i].green = (unsigned int)outVec[1];
-        pixelOut[i].red = (unsigned int)outVec[2];
-        pixelOut[i].alpha = (unsigned int)outVec[3];
+        pixelOut[i].blue = (unsigned int)outVec.a;
+        pixelOut[i].green = (unsigned int)outVec.b;
+        pixelOut[i].red = (unsigned int)outVec.c;
+        pixelOut[i].alpha = (unsigned int)outVec.d;
 
         // Increment x
         x++;
@@ -104,9 +103,9 @@ void ApplyRadialAberration(
     long long x = start % imgSize.x;
     long long y = start / imgSize.x;
 
-    double center[2];
-    center[0] = (imgSize.x - 1) / 2;
-    center[1] = (imgSize.y - 1) / 2;
+    Vect2 center;
+    center.a = (imgSize.x - 1) / 2;
+    center.b = (imgSize.y - 1) / 2;
     for (long long i = start; i < start + n; i++)
     {
         // Bounds checking
@@ -117,48 +116,48 @@ void ApplyRadialAberration(
         }
         if (y >= imgSize.y) break;
 
-        double displace[2];
-        displace[0] = x - center[0];
-        displace[1] = y - center[1];
+        Vect2 displace;
+        displace.a = x - center.a;
+        displace.b = y - center.b;
 
         // Normalize and check deadzone
-        ScaleVect2(displace, 1.0 / LenVect(center), displace);
+        displace = ScaleVect2(displace, 1.0 / LenVect(center));
         double deadZone = filterData.deadzone;
         deadZone /= 100.0;
         if (LenVect(displace) < deadZone)
         {
-            double baseColor[4];
-            GetColorAt(x, y, imgSize.x, imgData, baseColor);
-            pixelOut[i].blue = (unsigned int)baseColor[0];
-            pixelOut[i].green = (unsigned int)baseColor[1];
-            pixelOut[i].red = (unsigned int)baseColor[2];
-            pixelOut[i].alpha = (unsigned int)baseColor[3];
+            Vect4 baseColor;
+            baseColor = GetColorAt(x, y, imgSize.x, imgData);
+            pixelOut[i].blue = (unsigned int)baseColor.a;
+            pixelOut[i].green = (unsigned int)baseColor.b;
+            pixelOut[i].red = (unsigned int)baseColor.c;
+            pixelOut[i].alpha = (unsigned int)baseColor.d;
         }
         else
         {
             // Scale vector from 0 at edge of deadzone to 1 at corner of image
-            ScaleVect2(displace, (LenVect(displace) - deadZone) * (1.0 / 1.0-deadZone), displace);
+            displace = ScaleVect2(displace, (LenVect(displace) - deadZone) * (1.0 / 1.0-deadZone));
             if (filterData.expFalloff != 0)
             {
                 // Effectively square if using exponential falloff
-                ScaleVect2(displace, LenVect(displace), displace);
+                displace = ScaleVect2(displace, LenVect(displace));
             }
             // Scale final result by power
-            ScaleVect2(displace, filterData.power, displace);
+            displace = ScaleVect2(displace, filterData.power);
 
             Coords xy;
             xy.x = x;
             xy.y = y;
-            double outVec[4];
+            Vect4 outVec;
 
             // Do the thing
-            ApplyOnePixel(xy, displace, imgSize, pixelData, filterData.biFilter, outVec);
+            outVec = ApplyOnePixel(xy, displace, imgSize, pixelData, filterData.biFilter);
             // There's no way this could happen, but just in case...
             ClampVect4(outVec);
-            pixelOut[i].blue = (unsigned int)outVec[0];
-            pixelOut[i].green = (unsigned int)outVec[1];
-            pixelOut[i].red = (unsigned int)outVec[2];
-            pixelOut[i].alpha = (unsigned int)outVec[3];
+            pixelOut[i].blue = (unsigned int)outVec.a;
+            pixelOut[i].green = (unsigned int)outVec.b;
+            pixelOut[i].red = (unsigned int)outVec.c;
+            pixelOut[i].alpha = (unsigned int)outVec.d;
         }
 
         x++;

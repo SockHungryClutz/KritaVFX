@@ -6,12 +6,12 @@
 #include <stdlib.h>
 #include "HighPass.h"
 
-void ApplyPowerOnePixel(
+Pixel ApplyPowerOnePixel(
     Pixel power,
-    Pixel* inColor,
-    Pixel* outColor)
+    Pixel* inColor)
 {
     double outVec[3];
+    Pixel outColor;
     outVec[0] = inColor->blue * power.blue;
     outVec[1] = inColor->green * power.green;
     outVec[2] = inColor->red * power.red;
@@ -21,10 +21,11 @@ void ApplyPowerOnePixel(
     else if (outVec[1] > 255) outVec[1] = 255;
     if (outVec[2] < 0) outVec[2] = 0;
     else if (outVec[2] > 255) outVec[2] = 255;
-    outColor->blue = (unsigned char)outVec[0];
-    outColor->green = (unsigned char)outVec[1];
-    outColor->red = (unsigned char)outVec[2];
-    outColor->alpha = inColor->alpha;
+    outColor.blue = (unsigned char)outVec[0];
+    outColor.green = (unsigned char)outVec[1];
+    outColor.red = (unsigned char)outVec[2];
+    outColor.alpha = inColor->alpha;
+    return outColor;
 }
 
 void ApplyPower(
@@ -40,7 +41,11 @@ void ApplyPower(
 
     for (long long i = start; i < start + n; i++)
     {
-        ApplyPowerOnePixel(power, &(pixelData[i]), &(pixelOutData[i]));
+        Pixel outPixel = ApplyPowerOnePixel(power, &(pixelData[i]));
+        pixelOutData[i].blue = outPixel.blue;
+        pixelOutData[i].green = outPixel.green;
+        pixelOutData[i].red = outPixel.red;
+        pixelOutData[i].alpha = outPixel.alpha;
     }
 }
 
