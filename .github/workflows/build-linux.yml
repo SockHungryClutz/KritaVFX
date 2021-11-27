@@ -1,0 +1,25 @@
+name: build-lib-linux
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    env:
+      working-directory: ./VFX/src
+    steps:
+      - uses: actions/checkout@v2
+      - run: sudo apt-get install gcc
+      - name: build-x86
+        run: gcc -shared -m32 -o VFXLib_NIX32.so -fPIC VFXWrapper.c LensFlare.c HighPass.c ChromaticAberration.c Utils.c
+        working-directory: ${{env.working-directory}}
+      - name: build-x64
+        run: gcc -shared -o VFXLib_NIX64.so -fPIC VFXWrapper.c LensFlare.c HighPass.c ChromaticAberration.c Utils.c
+        working-directory: ${{env.working-directory}}
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./VFX/src/VFXLib_NIX32.so
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./VFX/src/VFXLib_NIX64.so
