@@ -28,7 +28,6 @@ This will pop open a window with options to control the effect before applying
 
 **Common Settings:**
 
-* Bias Color - Adds a chosen color to the intermediary results of an operation. This is additive and is used to bring out colors that would otherwise be lacking.
 * Power - Multiplies the result by itself X times, making what would normally be very subtle colors more obvious.
 * Displacement or Strength - How strong a certain stage for an effect will be, how much it will spread across the screen.
 * Bilinear Interpolation - Checking this option will make the plugin run slightly slower, but will make edges created by the effect smoother and less aliased.
@@ -47,7 +46,7 @@ All listed below are planned to be added to this plugin at some point, no defini
 
 ### Extra Notes
 
-This plugin relies on a shared C library for speeding up the computationally expensive parts. The source code for the C libraries is included in the `VFX/src` folder and has been precompiled for 32 and 64 bit versions of Windows, Mac OS, and Linux (Ubuntu) installations of Python. The source code can be compiled using gcc and the below commands:
+This plugin relies on a shared C library for speeding up the computationally expensive parts. The source code for the C libraries is included in the `VFX/src` folder. The main releases have been pre-compiled for 64 bit versions of MacOS, Windows, and Linux (Ubuntu). It is recommended that you use the 64 bit version of Krita for your system. The source code can be compiled using gcc and the below commands:
 
 ```
 gcc -shared -m32 -o VFXLib_32.so -fPIC VFXWrapper.c LensFlare.c HighPass.c ChromaticAberration.c Utils.c

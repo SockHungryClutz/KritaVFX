@@ -28,7 +28,6 @@
 This will pop open a window with options to control the effect before applying</p>
         <p><b>Common Settings:</b></p>
         <ul>
-            <li>Bias Color - Adds a chosen color to the intermediary results of an operation. This is additive and is used to bring out colors that would otherwise be lacking.</li>
             <li>Power - Multiplies the result by itself X times, making what would normally be very subtle colors more obvious.</li>
             <li>Displacement or Strength - How strong a certain stage for an effect will be, how much it will spread across the screen.</li>
             <li>Bilinear Interpolation - Checking this option will make the plugin run slightly slower, but will make edges created by the effect smoother and less aliased.</li>
@@ -41,11 +40,10 @@ This will pop open a window with options to control the effect before applying</
             <li>Support for more color profiles - currently only supports 8 bit RGBA</li>
             <li>Help button with detailed description for each widget, on each plugin window</li>
             <li>New effect - Render Lens Dirt</li>
-            <li>Color swatch picker for bias color</li>
             <li>Instant preview for any changes</li>
         </ul>
         <h3>Extra Notes</h3>
-        <p>This plugin relies on a shared C library for speeding up the computationally expensive parts. The source code for the C libraries is included in the `src` folder and has been precompiled for 32 and 64 bit versions of Windows, Mac OS, and Linux installations of Python. The source code can be compiled using gcc and the below commands:</p>
+        <p>This plugin relies on a shared C library for speeding up the computationally expensive parts. The source code for the C libraries is included in the `VFX/src` folder. The main releases have been pre-compiled for 64 bit versions of MacOS, Windows, and Linux (Ubuntu). It is recommended that you use the 64 bit version of Krita for your system. The source code can be compiled using gcc and the below commands:</p>
         <p>gcc -shared -m32 -o VFXLib_32.so -fPIC VFXWrapper.c LensFlare.c HighPass.c ChromaticAberration.c Utils.c<br />gcc -shared -o VFXLib_64.so -fPIC VFXWrapper.c LensFlare.c HighPass.c ChromaticAberration.c Utils.c</p>
     </body>
 </html>
