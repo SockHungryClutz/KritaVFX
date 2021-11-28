@@ -43,15 +43,15 @@ def GetSharedLibrary():
     if plat == "win32":
         # get windows path
         libPath = os.getenv('APPDATA')
-        libPath += "\\krita\\pykrita\\VFX\\VFXLib_WIN"
+        libPath += "\\krita\\pykrita\\VFX\\src\\VFXLib_WIN"
     elif plat == "darwin":
         # get osx path
         libPath = os.getenv('HOME')
-        libPath += "/Library/Application Support/Krita/pykrita/VFX/VFXLib_MAC"
+        libPath += "/Library/Application Support/Krita/pykrita/VFX/src/VFXLib_MAC"
     else:
         # get linux path
         libPath = os.getenv('HOME')
-        libPath += "/.local/share/krita/pykrita/VFX/VFXLib_NIX"
+        libPath += "/.local/share/krita/pykrita/VFX/src/VFXLib_NIX"
     # Determine 32 or 64 bit
     if sys.maxsize < 2**32:
         libPath += "32.so"
