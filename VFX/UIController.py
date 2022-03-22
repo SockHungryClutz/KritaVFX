@@ -76,7 +76,7 @@ class UIController(object):
             curNode.setBlendingMode(self.filterWidget.getBlendMode())
             # This will be no-op if there's nothing to do
             self.filterWidget.postFilter(app, doc, curNode)
-            doc.rootNode().addChildNode(curNode, doc.activeNode())
+            doc.activeNode().parentNode().addChildNode(curNode, doc.activeNode())
             doc.refreshProjection()
             self.saveSettings()
         self.mainWidget.accept()
