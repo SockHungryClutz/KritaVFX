@@ -90,7 +90,7 @@ class BloomWidget(QWidget):
         self.updateThread(int(settings.value("B_numThreads", 4)))
         # Update interactable UI elements
         self.threshold.setValue(self.thresh)
-        self.blurSlide.setValue(self.blurStrength * 1000)
+        self.blurSlide.setValue(int(self.blurStrength * 1000))
         self.powerSlide.setValue(self.power)
         self.workThreads.setValue(self.numThreads)
 

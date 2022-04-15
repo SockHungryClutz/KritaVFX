@@ -122,7 +122,7 @@ class AnamorphicLensFlareWidget(QWidget):
             self.shapeBtn1.setChecked(False)
             self.shapeBtn2.setChecked(True)
         self.threshold.setValue(self.thresh)
-        self.blurSlide.setValue(self.blurStrength * 1000)
+        self.blurSlide.setValue(int(self.blurStrength * 1000))
         self.powerSlide.setValue(self.power)
         self.workThreads.setValue(self.numThreads)
 
@@ -349,10 +349,10 @@ class PseudoLensFlareWidget(QWidget):
         # Update interactable UI elements
         self.threshold.setValue(self.thresh)
         self.copySlide.setValue(self.artifactCopies)
-        self.displaceSlide.setValue(self.artifactDispersal * 100)
-        self.haloSlide.setValue(self.haloWidth * 1000)
-        self.blurSlide.setValue(self.blurStrength * 1000)
-        self.aberrationSlide.setValue(self.aberrationStrength * 1000)
+        self.displaceSlide.setValue(int(self.artifactDispersal * 100))
+        self.haloSlide.setValue(int(self.haloWidth * 1000))
+        self.blurSlide.setValue(int(self.blurStrength * 1000))
+        self.aberrationSlide.setValue(int(self.aberrationStrength * 1000))
         self.powerSlide.setValue(self.power)
         self.workThreads.setValue(self.numThreads)
         self.biFilter.setChecked(self.interpolate)

@@ -191,7 +191,7 @@ class ChromAbWidget(QWidget):
         self.theDial.setValue(self.direction)
         self.shapeBtn1.setChecked(self.isShapeRadial)
         self.shapeBtn2.setChecked(not self.isShapeRadial)
-        self.maxDisplace.setValue(self.maxD * 1000)
+        self.maxDisplace.setValue(int(self.maxD * 1000))
         self.foBtn1.setChecked(self.isFalloffExp)
         self.foBtn2.setChecked(not self.isFalloffExp)
         self.deadzone.setValue(self.deadZ)
