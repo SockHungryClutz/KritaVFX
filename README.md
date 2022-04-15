@@ -1,4 +1,4 @@
-# Visual Effects (VFX) Plugin - Krita 4
+# Visual Effects (VFX) Plugin - Krita 4/5
 
 Plugin to apply a host of different visual effects seen in post-processing
 
