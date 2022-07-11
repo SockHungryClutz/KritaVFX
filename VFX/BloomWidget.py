@@ -4,10 +4,11 @@ Adds a widget and functionality for applying bloom
 to an image. A few properties can be configured.
 """
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QLabel, QRadioButton, QButtonGroup, QSlider, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QSlider, QVBoxLayout
 from ctypes import *
 from threading import Thread
-from .LibHandler import GetSharedLibrary, Coords, Pixel
+from .LibHandler import GetSharedLibrary, GetBytesPerPixel, Coords
+from os import cpu_count
 
 # Widget for bloom effect
 class BloomWidget(QWidget):
@@ -17,7 +18,7 @@ class BloomWidget(QWidget):
         self.thresh = 240
         self.blurStrength = 0.05
         self.power = 2
-        self.numThreads = 4
+        self.numThreads = cpu_count()
 
         self.threshInfo = QLabel("Threshold: 230", self)
         self.threshold = QSlider(Qt.Horizontal, self)
@@ -33,15 +34,9 @@ class BloomWidget(QWidget):
 
         self.powerInfo = QLabel("Power: 2", self)
         self.powerSlide = QSlider(Qt.Horizontal, self)
-        self.powerSlide.setRange(0, 25)
+        self.powerSlide.setRange(1, 25)
         self.powerSlide.setValue(2)
         self.powerSlide.valueChanged.connect(self.updatePower)
-
-        self.threadInfo = QLabel("Number of Worker Threads (FOR ADVANCED USERS): 4", self)
-        self.workThreads = QSlider(Qt.Horizontal, self)
-        self.workThreads.setRange(1, 64)
-        self.workThreads.setValue(4)
-        self.workThreads.valueChanged.connect(self.updateThread)
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.threshInfo)
@@ -50,8 +45,6 @@ class BloomWidget(QWidget):
         vbox.addWidget(self.blurSlide)
         vbox.addWidget(self.powerInfo)
         vbox.addWidget(self.powerSlide)
-        vbox.addWidget(self.threadInfo)
-        vbox.addWidget(self.workThreads)
 
         self.setLayout(vbox)
         self.show()
@@ -69,50 +62,56 @@ class BloomWidget(QWidget):
         self.powerInfo.setText("Power: " + str(value))
         self.power = value
 
-    def updateThread(self, value):
-        self.threadInfo.setText("Number of Worker Threads (FOR ADVANCED USERS): " + str(value))
-        self.numThreads = value
-
     # Required for main window to call into
     def getWindowName(self):
         return "Bloom"
+
+    def getHelpText(self):
+        return """Simulates bright, overexposed lighting by blending high lightness values into surroundings.
+
+Threshold (0-255)
+    The minimum brightness value for a color to be blended
+    into its neighbors
+Blur Strength (0.1-50%)
+    How far to blur the bright pixels, as a percentage of the
+    image's width
+Power (1-25)
+    Multiply the result by X to strengthen the effect"""
 
     def saveSettings(self, settings):
         settings.setValue("B_thresh", self.thresh)
         settings.setValue("B_blurStrength", self.blurStrength * 1000)
         settings.setValue("B_power", self.power)
-        settings.setValue("B_numThreads", self.numThreads)
 
     def readSettings(self, settings):
         self.updateThresh(int(settings.value("B_thresh", 230)))
         self.updateBlur(int(settings.value("B_blurStrength", 50)))
         self.updatePower(int(settings.value("B_power", 2)))
-        self.updateThread(int(settings.value("B_numThreads", 4)))
+        self.numThreads = int(settings.value("G_numThreads", cpu_count()))
         # Update interactable UI elements
         self.threshold.setValue(self.thresh)
         self.blurSlide.setValue(int(self.blurStrength * 1000))
         self.powerSlide.setValue(self.power)
-        self.workThreads.setValue(self.numThreads)
 
     def getBlendMode(self):
         return "add"
 
     # Call into C library to process the image
-    def applyFilter(self, imgData, imgSize):
+    def applyFilter(self, imgData, imgSize, colorData):
         # Bloom is in 2 steps: threshold, then blur
-        newData = create_string_buffer(imgSize[0] * imgSize[1] * 4)
+        newData = create_string_buffer(imgSize[0] * imgSize[1] * GetBytesPerPixel(colorData))
         dll = GetSharedLibrary()
         imgCoords = Coords(imgSize[0], imgSize[1])
         # python makes it hard to get a pointer to existing buffers for some reason
         cimgData = c_char * len(imgData)
         threadPool = []
         idx = 0
+        numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
         for i in range(self.numThreads):
-            numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
             if i == self.numThreads - 1:
                 numPixels = (imgSize[0] * imgSize[1]) - idx # Give the last thread the remainder
             workerThread = Thread(target=dll.VFXHighPass, args=(idx, numPixels, self.thresh,
-                                    imgCoords, cimgData.from_buffer(imgData), byref(newData),))
+                                    imgCoords, cimgData.from_buffer(imgData), byref(newData), colorData))
             threadPool.append(workerThread)
             threadPool[i].start()
             idx += numPixels
@@ -123,7 +122,7 @@ class BloomWidget(QWidget):
         return bytes(newData)
 
     # Use Krita's built-in filters after everything else
-    def postFilter(self, app, doc, node):
+    def postFilter(self, app, doc, node, colorData):
         blurFilter = app.filter("blur")
         blurConfig = blurFilter.configuration()
         blurConfig.setProperty("halfHeight", self.blurStrength * doc.width())
@@ -135,16 +134,15 @@ class BloomWidget(QWidget):
         imgData = node.projectionPixelData(0, 0, doc.width(), doc.height())
         imgSize = Coords(doc.width(), doc.height())
         cimgData = c_char * len(imgData)
-        newData = create_string_buffer(imgSize.x * imgSize.y * 4)
+        newData = create_string_buffer(imgSize.x * imgSize.y * GetBytesPerPixel(colorData))
         threadPool = []
         idx = 0
-        power = Pixel(self.power, self.power, self.power, self.power)
+        numPixels = (imgSize.x * imgSize.y) // self.numThreads
         for i in range(self.numThreads):
-            numPixels = (imgSize.x * imgSize.y) // self.numThreads
             if i == self.numThreads - 1:
                 numPixels = (imgSize.x * imgSize.y) - idx # Give the last thread the remainder
-            workerThread = Thread(target=dll.VFXPower, args=(idx, numPixels, power,
-                                    imgSize, cimgData.from_buffer(imgData), byref(newData),))
+            workerThread = Thread(target=dll.VFXPower, args=(idx, numPixels, self.power,
+                                    imgSize, cimgData.from_buffer(imgData), byref(newData), colorData))
             threadPool.append(workerThread)
             threadPool[i].start()
             idx += numPixels

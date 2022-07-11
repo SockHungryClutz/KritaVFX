@@ -8,28 +8,28 @@
 #include "ChromaticAberration.h"
 
 // Applies the effect to a single pixel
-Vect4 ApplyOnePixel(
+Pixel ApplyOnePixel(
     Coords xy,
     Vect2 vec,
     Coords imgSize,
-    Pixel* imgData,
+    void* imgData,
+    ColorData colorData,
     char interpolate)
 {
-    Vect4 baseColor;
-    Vect4 redChannel;
-    Vect4 blueChannel;
+    Pixel baseColor = {0, 0, 0, 0, 0};
+    Pixel redChannel = {0, 0, 0, 0, 0};
+    Pixel blueChannel = {0, 0, 0, 0, 0};
 
-    baseColor = GetColorAt(xy.x, xy.y, imgSize.x, imgData);
-    redChannel = SampleAt(xy.x + vec.a, xy.y + vec.b, imgSize, imgData, interpolate);
-    blueChannel = SampleAt(xy.x - vec.a, xy.y - vec.b, imgSize, imgData, interpolate);
-    double transparency = (baseColor.d + redChannel.d + blueChannel.d) / 3;
+    baseColor = GetColorAt(xy.x, xy.y, imgSize.x, imgData, colorData);
+    redChannel = SampleAt(xy.x + vec.a, xy.y + vec.b, imgSize, imgData, colorData, interpolate);
+    blueChannel = SampleAt(xy.x - vec.a, xy.y - vec.b, imgSize, imgData, colorData, interpolate);
+    double transparency = (baseColor.a + redChannel.a + blueChannel.a) / 3.0;
 
-    Vect4 out;
-    out.a = redChannel.a;
-    out.b = baseColor.b;
-    out.c = blueChannel.c;
-    out.d = transparency;
-    return out;
+    baseColor.r = redChannel.r;
+    baseColor.b = blueChannel.b;
+    baseColor.a = transparency;
+
+    return baseColor;
 }
 
 // Applies a linear aberration over a set of n pixels
@@ -41,11 +41,9 @@ void ApplyLinearAberration(
     LinearFilterData filterData,
     Coords imgSize,
     void* imgData,
-    void* outData)
+    void* outData,
+    ColorData colorData)
 {
-    Pixel* pixelData = (Pixel*)imgData;
-    Pixel* pixelOut = (Pixel*)outData;
-
     // Calculate vector to use for every pixel
     Vect2 vec;
     double rad = DegreeToRadian(filterData.direction);
@@ -58,6 +56,22 @@ void ApplyLinearAberration(
     long long y = start / imgSize.x;
     for (long long i = start; i < start + n; i++)
     {
+        // Build coordinates
+        Coords xy;
+        xy.x = x;
+        xy.y = y;
+
+        // Allocate output vector
+        Pixel outVec = {0, 0, 0, 0, 0};
+
+        // Do the thing
+        outVec = ApplyOnePixel(xy, vec, imgSize, imgData, colorData, filterData.biFilter);
+        // There's no way this could happen, but just in case...
+        ClampToColorSpace(outVec, colorData);
+        WritePixel(i, outVec, outData, colorData);
+
+        // Increment x
+        x++;
         // Bounds checking
         if (x >= imgSize.x)
         {
@@ -65,26 +79,6 @@ void ApplyLinearAberration(
             y++;
         }
         if (y >= imgSize.y) break;
-
-        // Build coordinates
-        Coords xy;
-        xy.x = x;
-        xy.y = y;
-
-        // Allocate output vector
-        Vect4 outVec;
-
-        // Do the thing
-        outVec = ApplyOnePixel(xy, vec, imgSize, pixelData, filterData.biFilter);
-        // There's no way this could happen, but just in case...
-        ClampVect4(outVec);
-        pixelOut[i].blue = (unsigned int)outVec.a;
-        pixelOut[i].green = (unsigned int)outVec.b;
-        pixelOut[i].red = (unsigned int)outVec.c;
-        pixelOut[i].alpha = (unsigned int)outVec.d;
-
-        // Increment x
-        x++;
     }
 }
 
@@ -95,11 +89,9 @@ void ApplyRadialAberration(
     RadialFilterData filterData,
     Coords imgSize,
     void* imgData,
-    void* outData)
+    void* outData,
+    ColorData colorData)
 {
-    Pixel* pixelData = (Pixel*)imgData;
-    Pixel* pixelOut = (Pixel*)outData;
-
     long long x = start % imgSize.x;
     long long y = start / imgSize.x;
 
@@ -108,14 +100,6 @@ void ApplyRadialAberration(
     center.b = (imgSize.y - 1) / 2;
     for (long long i = start; i < start + n; i++)
     {
-        // Bounds checking
-        if (x >= imgSize.x)
-        {
-            x = 0;
-            y++;
-        }
-        if (y >= imgSize.y) break;
-
         Vect2 displace;
         displace.a = x - center.a;
         displace.b = y - center.b;
@@ -126,12 +110,9 @@ void ApplyRadialAberration(
         deadZone /= 100.0;
         if (LenVect(displace) < deadZone)
         {
-            Vect4 baseColor;
-            baseColor = GetColorAt(x, y, imgSize.x, imgData);
-            pixelOut[i].blue = (unsigned int)baseColor.a;
-            pixelOut[i].green = (unsigned int)baseColor.b;
-            pixelOut[i].red = (unsigned int)baseColor.c;
-            pixelOut[i].alpha = (unsigned int)baseColor.d;
+            Pixel baseColor = {0, 0, 0, 0, 0};
+            baseColor = GetColorAt(x, y, imgSize.x, imgData, colorData);
+            WritePixel(i, baseColor, outData, colorData);
         }
         else
         {
@@ -148,18 +129,22 @@ void ApplyRadialAberration(
             Coords xy;
             xy.x = x;
             xy.y = y;
-            Vect4 outVec;
+            Pixel outVec = {0, 0, 0, 0, 0};
 
             // Do the thing
-            outVec = ApplyOnePixel(xy, displace, imgSize, pixelData, filterData.biFilter);
+            outVec = ApplyOnePixel(xy, displace, imgSize, imgData, colorData, filterData.biFilter);
             // There's no way this could happen, but just in case...
-            ClampVect4(outVec);
-            pixelOut[i].blue = (unsigned int)outVec.a;
-            pixelOut[i].green = (unsigned int)outVec.b;
-            pixelOut[i].red = (unsigned int)outVec.c;
-            pixelOut[i].alpha = (unsigned int)outVec.d;
+            ClampToColorSpace(outVec, colorData);
+            WritePixel(i, outVec, outData, colorData);
         }
 
         x++;
+        // Bounds checking
+        if (x >= imgSize.x)
+        {
+            x = 0;
+            y++;
+        }
+        if (y >= imgSize.y) break;
     }
 }

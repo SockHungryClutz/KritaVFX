@@ -30,7 +30,8 @@ void ApplyLinearAberration(
     LinearFilterData filterData,
     Coords imgSize,
     void* imgData,
-    void* outData);
+    void* outData,
+    ColorData colorData);
 
 void ApplyRadialAberration(
     long long start,
@@ -38,6 +39,7 @@ void ApplyRadialAberration(
     RadialFilterData filterData,
     Coords imgSize,
     void* imgData,
-    void* outData);
+    void* outData,
+    ColorData colorData);
 
 #endif // ifndef _CHROMATICABERRATION_H_

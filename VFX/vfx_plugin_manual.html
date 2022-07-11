@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>VFX Plugin Manual - Krita 4</title>
+        <title>VFX Plugin Manual - Krita 4/5</title>
     </head>
     <body>
-        <h1>Visual Effects (VFX) Plugin - Krita 4</h1>
+        <h1>Visual Effects (VFX) Plugin - Krita 4/5</h1>
         <p>Plugin to apply a host of different visual effects seen in post-processing</p>
         <p>Includes the following effects:</p>
         <ul>
@@ -12,6 +12,15 @@
             <li>Bloom</li>
             <li>Pseudo Lens Flare</li>
             <li>Anamorphic Lens Flare</li>
+            <li>Render Lens Dirt</li>
+        </ul>
+        <p>Supports the following color modes and depths:</p>
+        <ul>
+            <li><b>ALL</b> color modes in Krita (as of 5.0), RGB/Alpha, CMYK/Alpha, XYZ/Alpha, L*a*b*/Alpha, Grayscale/Alpha, and YCbCr/Alpha</li>
+            <li>8-bit integer/channel, 16-bit integer/channel, and 32-bit float/channel depths</li>
+                <ul>
+                    <li>(32-bit float will likely have unintended effects as the current implementation of the plugin tries to do a best guess of the default color space)</li>
+                </ul>
         </ul>
         <h2>How to Install</h2>
         <ol>
@@ -31,16 +40,15 @@ This will pop open a window with options to control the effect before applying</
             <li>Power - Multiplies the result by itself X times, making what would normally be very subtle colors more obvious.</li>
             <li>Displacement or Strength - How strong a certain stage for an effect will be, how much it will spread across the screen.</li>
             <li>Bilinear Interpolation - Checking this option will make the plugin run slightly slower, but will make edges created by the effect smoother and less aliased.</li>
-            <li>Number of Worker Threads (FOR ADVANCED USERS) - As the warning says, this option is for users who know what their CPU is capable of. Larger values will apply the effect faster on very large images, but if the value exceeds the number of threads your CPU can reasonably handle the process will take longer. The default value of 4 will work well on the vast majority of CPUs that can handle Krita.</li>
+            <li>Number of Worker Threads (FOR ADVANCED USERS) - As the warning says, this option is for users who know what their CPU is capable of. Larger values will apply the effect faster on very large images, but if the value exceeds the number of threads your CPU can reasonably handle the process will take longer. By default, this will be set to the optimum setting, equal to the number fo concurrent threads your CPU can handle.</li>
         </ul>
         <p>Once the effect is applied it will be placed on a new layer as a modified clone of the previously selected layer, the original layer is preserved.</p>
+        <p>Use the **Help** button to see a more descriptive explination of each option.</p>
         <h2>Planned Features</h2>
         <p>All listed below are planned to be added to this plugin at some point, no definitive time table or order yet. Check back regularly if you are interested in one or more of these features being added:</p>
         <ul>
-            <li>Support for more color profiles - currently only supports 8 bit RGBA</li>
-            <li>Help button with detailed description for each widget, on each plugin window</li>
-            <li>New effect - Render Lens Dirt</li>
             <li>Instant preview for any changes</li>
+            <li>Fine tune control over filter options and the ability to manually enter values</li>
         </ul>
         <h3>Extra Notes</h3>
         <p>This plugin relies on a shared C library for speeding up the computationally expensive parts. The source code for the C libraries is included in the `VFX/src` folder. The main releases have been pre-compiled for 64 bit versions of MacOS, Windows, and Linux (Ubuntu). It is recommended that you use the 64 bit version of Krita for your system. The source code can be compiled using gcc and the below commands:</p>

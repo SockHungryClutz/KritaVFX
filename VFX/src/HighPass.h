@@ -13,10 +13,11 @@
 void ApplyPower(
     long long start,
     long long n,
-    Pixel power,
+    int power,
     Coords imgSize,
     void* imgData,
-    void* outData);
+    void* outData,
+    ColorData colorData);
 
 void ApplyHighPass(
     long long start,
@@ -24,6 +25,7 @@ void ApplyHighPass(
     int threshold,
     Coords imgSize,
     void* imgData,
-    void* outData);
+    void* outData,
+    ColorData colorData);
 
 #endif // ifndef _HIGHPASS_H_

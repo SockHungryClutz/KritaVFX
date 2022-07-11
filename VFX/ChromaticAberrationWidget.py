@@ -7,7 +7,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QLabel, QRadioButton, QButtonGroup, QDial, QSlider, QCheckBox, QVBoxLayout
 from ctypes import *
 from threading import Thread
-from .LibHandler import GetSharedLibrary, Coords, RadialFilterData, LinearFilterData
+from .LibHandler import GetSharedLibrary, GetBytesPerPixel, Coords, RadialFilterData, LinearFilterData
+from os import cpu_count
 
 # Widget for chromatic aberration effect
 class ChromAbWidget(QWidget):
@@ -20,7 +21,7 @@ class ChromAbWidget(QWidget):
         self.isFalloffExp = True
         self.direction = 100
         self.interpolate = False
-        self.numThreads = 4
+        self.numThreads = cpu_count()
 
         self.shapeInfo = QLabel("Shape and Direction:", self)
         self.shapeChoice = QButtonGroup(self)
@@ -65,12 +66,6 @@ class ChromAbWidget(QWidget):
         self.biFilter = QCheckBox("Bilinear Interpolation (slow, but smooths colors)", self)
         self.biFilter.stateChanged.connect(self.updateInterp)
 
-        self.threadInfo = QLabel("Number of Worker Threads (FOR ADVANCED USERS): 4", self)
-        self.workThreads = QSlider(Qt.Horizontal, self)
-        self.workThreads.setRange(1, 64)
-        self.workThreads.setValue(4)
-        self.workThreads.valueChanged.connect(self.updateThread)
-
         vbox = QVBoxLayout()
         vbox.addWidget(self.shapeInfo)
         vbox.addWidget(self.shapeBtn1)
@@ -84,8 +79,6 @@ class ChromAbWidget(QWidget):
         vbox.addWidget(self.deadInfo)
         vbox.addWidget(self.deadzone)
         vbox.addWidget(self.biFilter)
-        vbox.addWidget(self.threadInfo)
-        vbox.addWidget(self.workThreads)
 
         self.setLayout(vbox)
         self.show()
@@ -138,13 +131,27 @@ class ChromAbWidget(QWidget):
         else:
             self.interpolate = False
 
-    def updateThread(self, value):
-        self.threadInfo.setText("Number of Worker Threads (FOR ADVANCED USERS): " + str(value))
-        self.numThreads = value
-
     # Required for main window to call into
     def getWindowName(self):
         return "Chromatic Aberration"
+
+    def getHelpText(self):
+        return """Simulates light distortion by shifting the red and blue channels
+
+Shape and Direction (Radial/Linear)
+    Radial increases the distortion further from center, Linear applies a consistent
+    distortion in the direction specified by the dial
+Max Displacement (0.1-50%)
+    The maximum size of the distortion, as a percent of the image width
+Falloff (Exponential/Linear)
+    [Radial shape only!] Determines how quickly the distortion increases from the
+    center of the image to the edges
+Deadzone (0-100%)
+    [Radial shape only!] How far from the center of the screen should there be no
+    distortion, as a percent of image width
+Bilinear Interpolation
+    Using bilinear interpolation while sampling will yield smoother results, but take
+    slightly more time to calculate"""
 
     def saveSettings(self, settings):
         settings.setValue("CA_maxD", self.maxD * 1000)
@@ -165,7 +172,6 @@ class ChromAbWidget(QWidget):
         else:
             interp = 0
         settings.setValue("CA_interpolate", interp)
-        settings.setValue("CA_numThreads", self.numThreads)
 
     def readSettings(self, settings):
         self.updateMax(int(settings.value("CA_maxD", 10)))
@@ -186,7 +192,7 @@ class ChromAbWidget(QWidget):
             self.interpolate = True
         else:
             self.interpolate = False
-        self.updateThread(int(settings.value("CA_numThreads", 4)))
+        self.numThreads = int(settings.value("G_numThreads", cpu_count()))
         # Update interactable UI elements
         self.theDial.setValue(self.direction)
         self.shapeBtn1.setChecked(self.isShapeRadial)
@@ -196,7 +202,6 @@ class ChromAbWidget(QWidget):
         self.foBtn2.setChecked(not self.isFalloffExp)
         self.deadzone.setValue(self.deadZ)
         self.biFilter.setChecked(self.interpolate)
-        self.workThreads.setValue(self.numThreads)
         if self.isShapeRadial:
             self.changeShape1()
         else:
@@ -206,8 +211,8 @@ class ChromAbWidget(QWidget):
         return "normal"
 
     # Call into C library to process the image
-    def applyFilter(self, imgData, imgSize):
-        newData = create_string_buffer(imgSize[0] * imgSize[1] * 4)
+    def applyFilter(self, imgData, imgSize, colorData):
+        newData = create_string_buffer(imgSize[0] * imgSize[1] * GetBytesPerPixel(colorData))
         dll = GetSharedLibrary()
         imgCoords = Coords(imgSize[0], imgSize[1])
         # python makes it hard to get a pointer to existing buffers for some reason
@@ -224,16 +229,16 @@ class ChromAbWidget(QWidget):
         else:
             filterSettings = LinearFilterData(int(self.maxD * imgSize[0]), self.direction, interp)
         idx = 0
+        numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
         for i in range(self.numThreads):
-            numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
             if i == self.numThreads - 1:
                 numPixels = (imgSize[0] * imgSize[1]) - idx # Give the last thread the remainder
             if self.isShapeRadial:
                 workerThread = Thread(target=dll.VFXRadialAberration, args=(idx, numPixels, filterSettings,
-                                        imgCoords, cimgData.from_buffer(imgData), byref(newData),))
+                                        imgCoords, cimgData.from_buffer(imgData), byref(newData), colorData,))
             else:
                 workerThread = Thread(target=dll.VFXLinearAberration, args=(idx, numPixels, filterSettings,
-                                        imgCoords, cimgData.from_buffer(imgData), byref(newData),))
+                                        imgCoords, cimgData.from_buffer(imgData), byref(newData), colorData,))
             threadPool.append(workerThread)
             threadPool[i].start()
             idx += numPixels
@@ -243,5 +248,5 @@ class ChromAbWidget(QWidget):
             threadPool[i].join()
         return bytes(newData)
 
-    def postFilter(self, app, doc, node):
+    def postFilter(self, app, doc, node, colorData):
         pass

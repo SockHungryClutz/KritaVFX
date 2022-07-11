@@ -6,7 +6,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QLabel, QRadioButton, QButtonGroup, QSlider, QCheckBox, QVBoxLayout
 from ctypes import *
 from threading import Thread
-from .LibHandler import GetSharedLibrary, Coords, Pixel, LensFlareFilterData, RadialFilterData, LinearFilterData
+from .LibHandler import GetSharedLibrary, GetBytesPerPixel, Coords, LensFlareFilterData, RadialFilterData
+from os import cpu_count
 
 # Widget for those long lines of lens flare
 class AnamorphicLensFlareWidget(QWidget):
@@ -17,7 +18,7 @@ class AnamorphicLensFlareWidget(QWidget):
         self.blurStrength = 0.5
         self.isHorizontal = True
         self.power = 10
-        self.numThreads = 4
+        self.numThreads = cpu_count()
 
         self.threshInfo = QLabel("Threshold: 250", self)
         self.threshold = QSlider(Qt.Horizontal, self)
@@ -43,15 +44,9 @@ class AnamorphicLensFlareWidget(QWidget):
 
         self.powerInfo = QLabel("Power: 10", self)
         self.powerSlide = QSlider(Qt.Horizontal, self)
-        self.powerSlide.setRange(0, 25)
+        self.powerSlide.setRange(1, 25)
         self.powerSlide.setValue(10)
         self.powerSlide.valueChanged.connect(self.updatePower)
-
-        self.threadInfo = QLabel("Number of Worker Threads (FOR ADVANCED USERS): 4", self)
-        self.workThreads = QSlider(Qt.Horizontal, self)
-        self.workThreads.setRange(1, 64)
-        self.workThreads.setValue(4)
-        self.workThreads.valueChanged.connect(self.updateThread)
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.threshInfo)
@@ -63,8 +58,6 @@ class AnamorphicLensFlareWidget(QWidget):
         vbox.addWidget(self.shapeBtn2)
         vbox.addWidget(self.powerInfo)
         vbox.addWidget(self.powerSlide)
-        vbox.addWidget(self.threadInfo)
-        vbox.addWidget(self.workThreads)
 
         self.setLayout(vbox)
         self.show()
@@ -88,19 +81,28 @@ class AnamorphicLensFlareWidget(QWidget):
         self.powerInfo.setText("Power: " + str(value))
         self.power = value
 
-    def updateThread(self, value):
-        self.threadInfo.setText("Number of Worker Threads (FOR ADVANCED USERS): " + str(value))
-        self.numThreads = value
-
     # Required for main window to call into
     def getWindowName(self):
         return "Anamorphic Lens Flare"
+    
+    def getHelpText(self):
+        return """Simulates lens flare caused by overexposure in anamorphic film cameras
+
+Threshold (0-255)
+    The minimum brightness value for a color to be bright enough
+    to cause the lens flare
+Blur Strength (0.1-100%)
+    How far to blur the effect, as a percent of image width for
+    horizontal direction, or image height for vertical
+Blur Direction (Horizontal/Vertical)
+    Which direction to stretch the blur effect
+Power (1-25)
+    Multiply the result by X to increase the effect"""
 
     def saveSettings(self, settings):
         settings.setValue("AF_thresh", self.thresh)
         settings.setValue("AF_blurStrength", self.blurStrength * 1000)
         settings.setValue("AF_power", self.power)
-        settings.setValue("AF_numThreads", self.numThreads)
         if self.isHorizontal:
             horiz = 1
         else:
@@ -111,7 +113,7 @@ class AnamorphicLensFlareWidget(QWidget):
         self.updateThresh(int(settings.value("AF_thresh", 250)))
         self.updateBlur(int(settings.value("AF_blurStrength", 500)))
         self.updatePower(int(settings.value("AF_power", 10)))
-        self.updateThread(int(settings.value("AF_numThreads", 4)))
+        self.numThreads = int(settings.value("G_numThreads", cpu_count()))
         # Update interactable UI elements
         if int(settings.value("AF_isHorizontal", 1)) == 1:
             self.changeShape1()
@@ -124,27 +126,26 @@ class AnamorphicLensFlareWidget(QWidget):
         self.threshold.setValue(self.thresh)
         self.blurSlide.setValue(int(self.blurStrength * 1000))
         self.powerSlide.setValue(self.power)
-        self.workThreads.setValue(self.numThreads)
 
     def getBlendMode(self):
         return "add"
 
     # Call into C library to process the image
-    def applyFilter(self, imgData, imgSize):
+    def applyFilter(self, imgData, imgSize, colorData):
         # Anamorphic Lens Flare is in 2 steps: threshold, then blur
-        newData = create_string_buffer(imgSize[0] * imgSize[1] * 4)
+        newData = create_string_buffer(imgSize[0] * imgSize[1] * GetBytesPerPixel(colorData))
         dll = GetSharedLibrary()
         imgCoords = Coords(imgSize[0], imgSize[1])
         # python makes it hard to get a pointer to existing buffers for some reason
         cimgData = c_char * len(imgData)
         threadPool = []
         idx = 0
+        numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
         for i in range(self.numThreads):
-            numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
             if i == self.numThreads - 1:
                 numPixels = (imgSize[0] * imgSize[1]) - idx # Give the last thread the remainder
             workerThread = Thread(target=dll.VFXHighPass, args=(idx, numPixels, self.thresh,
-                                    imgCoords, cimgData.from_buffer(imgData), byref(newData),))
+                                    imgCoords, cimgData.from_buffer(imgData), byref(newData), colorData,))
             threadPool.append(workerThread)
             threadPool[i].start()
             idx += numPixels
@@ -155,7 +156,7 @@ class AnamorphicLensFlareWidget(QWidget):
         return bytes(newData)
 
     # Use Krita's built-in filters after everything else
-    def postFilter(self, app, doc, node):
+    def postFilter(self, app, doc, node, colorData):
         blurFilter = app.filter("blur")
         blurConfig = blurFilter.configuration()
         if self.isHorizontal:
@@ -169,16 +170,15 @@ class AnamorphicLensFlareWidget(QWidget):
         imgData = node.projectionPixelData(0, 0, doc.width(), doc.height())
         imgSize = Coords(doc.width(), doc.height())
         cimgData = c_char * len(imgData)
-        newData = create_string_buffer(imgSize.x * imgSize.y * 4)
+        newData = create_string_buffer(imgSize.x * imgSize.y * GetBytesPerPixel(colorData))
         threadPool = []
         idx = 0
-        power = Pixel(self.power, self.power, self.power, self.power)
+        numPixels = (imgSize.x * imgSize.y) // self.numThreads
         for i in range(self.numThreads):
-            numPixels = (imgSize.x * imgSize.y) // self.numThreads
             if i == self.numThreads - 1:
                 numPixels = (imgSize.x * imgSize.y) - idx # Give the last thread the remainder
-            workerThread = Thread(target=dll.VFXPower, args=(idx, numPixels, power,
-                                    imgSize, cimgData.from_buffer(imgData), byref(newData),))
+            workerThread = Thread(target=dll.VFXPower, args=(idx, numPixels, self.power,
+                                    imgSize, cimgData.from_buffer(imgData), byref(newData), colorData,))
             threadPool.append(workerThread)
             threadPool[i].start()
             idx += numPixels
@@ -199,7 +199,7 @@ class PseudoLensFlareWidget(QWidget):
         self.haloWidth = 0.25          # %  slider 1-400
         self.power = 2
         self.interpolate = False
-        self.numThreads = 4
+        self.numThreads = cpu_count()
 
         self.threshInfo = QLabel("Threshold: 250", self)
         self.threshold = QSlider(Qt.Horizontal, self)
@@ -239,18 +239,12 @@ class PseudoLensFlareWidget(QWidget):
 
         self.powerInfo = QLabel("Power: 1", self)
         self.powerSlide = QSlider(Qt.Horizontal, self)
-        self.powerSlide.setRange(0, 10)
+        self.powerSlide.setRange(1, 10)
         self.powerSlide.setValue(1)
         self.powerSlide.valueChanged.connect(self.updatePower)
 
         self.biFilter = QCheckBox("Bilinear Interpolation (slow, but smooths colors)", self)
         self.biFilter.stateChanged.connect(self.updateInterp)
-
-        self.threadInfo = QLabel("Number of Worker Threads (FOR ADVANCED USERS): 4", self)
-        self.workThreads = QSlider(Qt.Horizontal, self)
-        self.workThreads.setRange(1, 64)
-        self.workThreads.setValue(4)
-        self.workThreads.valueChanged.connect(self.updateThread)
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.threshInfo)
@@ -268,8 +262,6 @@ class PseudoLensFlareWidget(QWidget):
         vbox.addWidget(self.powerInfo)
         vbox.addWidget(self.powerSlide)
         vbox.addWidget(self.biFilter)
-        vbox.addWidget(self.threadInfo)
-        vbox.addWidget(self.workThreads)
 
         self.setLayout(vbox)
         self.show()
@@ -309,13 +301,31 @@ class PseudoLensFlareWidget(QWidget):
         else:
             self.interpolate = False
 
-    def updateThread(self, value):
-        self.threadInfo.setText("Number of Worker Threads (FOR ADVANCED USERS): " + str(value))
-        self.numThreads = value
-
     # Required for main window to call into
     def getWindowName(self):
         return "Pseudo Lens Flare"
+
+    def getHelpText(self):
+        return """Simulates a generic fake lens flare
+
+Threshold (0-255)
+    The minimum brightness value for a color to be bright enough to cause the lens flare
+Artifact Copies (0-8)
+    How many copies of bright lighting artifacts should be sampled
+Artifact Displacement (1-200%)
+    Distance between each copy of the artifact, as a percent of the image width (can wrap
+    around to the other side of the image)
+Halo Width (0.1-100%)
+    Radius of the halo effect, as a percentage of image width
+Blur Strength (0.1-50%)
+    How far to blur the effect, as a percent of image width
+Aberration Strength (0-50%)
+    The maximum size of chromatic distortion effect, as a percent of image width
+Power (1-10)
+    Multiply the result by X to increase the effect
+Bilinear Interpolation
+    Using bilinear interpolation while sampling will yield smoother results, but take slightly
+    more time to calculate"""
 
     def saveSettings(self, settings):
         settings.setValue("PF_thresh",             self.thresh)
@@ -330,7 +340,6 @@ class PseudoLensFlareWidget(QWidget):
         else:
             interp = 0
         settings.setValue("PF_interpolate",        interp)
-        settings.setValue("PF_numThreads",         self.numThreads)
 
     def readSettings(self, settings):
         self.updateThresh(int(settings.value("PF_thresh", 250)))
@@ -339,7 +348,7 @@ class PseudoLensFlareWidget(QWidget):
         self.updateHalo(int(settings.value("PF_haloWidth", 250)))
         self.updateBlur(int(settings.value("PF_blurStrength", 100)))
         self.updateAberration(int(settings.value("PF_aberrationStrength", 50)))
-        self.updateThread(int(settings.value("PF_numThreads", 4)))
+        self.numThreads = int(settings.value("G_numThreads", cpu_count()))
         self.updatePower(int(settings.value("PF_power", 1)))
         interp = int(settings.value("PF_interpolate", 0))
         if interp == 1:
@@ -354,16 +363,15 @@ class PseudoLensFlareWidget(QWidget):
         self.blurSlide.setValue(int(self.blurStrength * 1000))
         self.aberrationSlide.setValue(int(self.aberrationStrength * 1000))
         self.powerSlide.setValue(self.power)
-        self.workThreads.setValue(self.numThreads)
         self.biFilter.setChecked(self.interpolate)
 
     def getBlendMode(self):
         return "add"
 
     # Call into C library to process the image
-    def applyFilter(self, imgData, imgSize):
-        newData = create_string_buffer(imgSize[0] * imgSize[1] * 4)
-        newData2 = create_string_buffer(imgSize[0] * imgSize[1] * 4)
+    def applyFilter(self, imgData, imgSize, colorData):
+        newData = create_string_buffer(imgSize[0] * imgSize[1] * GetBytesPerPixel(colorData))
+        newData2 = create_string_buffer(imgSize[0] * imgSize[1] * GetBytesPerPixel(colorData))
         dll = GetSharedLibrary()
         imgCoords = Coords(imgSize[0], imgSize[1])
         # python makes it hard to get a pointer to existing buffers for some reason
@@ -379,13 +387,13 @@ class PseudoLensFlareWidget(QWidget):
         aberrationFilterSettings = RadialFilterData(int(self.aberrationStrength * imgSize[0]), 0, 0, interp)
         threadPool = []
         idx = 0
+        numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
         # highpass
         for i in range(self.numThreads):
-            numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
             if i == self.numThreads - 1:
                 numPixels = (imgSize[0] * imgSize[1]) - idx # Give the last thread the remainder
             workerThread = Thread(target=dll.VFXHighPass, args=(idx, numPixels, self.thresh,
-                                    imgCoords, cimgData.from_buffer(imgData), byref(newData),))
+                                    imgCoords, cimgData.from_buffer(imgData), byref(newData), colorData,))
             threadPool.append(workerThread)
             threadPool[i].start()
             idx += numPixels
@@ -394,12 +402,12 @@ class PseudoLensFlareWidget(QWidget):
         # psuedoflare
         threadPool = []
         idx = 0
+        numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
         for i in range(self.numThreads):
-            numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
             if i == self.numThreads - 1:
                 numPixels = (imgSize[0] * imgSize[1]) - idx # Give the last thread the remainder
             workerThread = Thread(target=dll.VFXPsuedoLensFlare, args=(idx, numPixels,
-                                    flareFilterSettings, imgCoords, byref(newData), byref(newData2),))
+                                    flareFilterSettings, imgCoords, byref(newData), byref(newData2), colorData,))
             threadPool.append(workerThread)
             threadPool[i].start()
             idx += numPixels
@@ -408,12 +416,12 @@ class PseudoLensFlareWidget(QWidget):
         # chromatic aberration
         threadPool = []
         idx = 0
+        numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
         for i in range(self.numThreads):
-            numPixels = (imgSize[0] * imgSize[1]) // self.numThreads
             if i == self.numThreads - 1:
                 numPixels = (imgSize[0] * imgSize[1]) - idx # Give the last thread the remainder
             workerThread = Thread(target=dll.VFXRadialAberration, args=(idx, numPixels,
-                                    aberrationFilterSettings, imgCoords, byref(newData2), byref(newData),))
+                                    aberrationFilterSettings, imgCoords, byref(newData2), byref(newData), colorData,))
             threadPool.append(workerThread)
             threadPool[i].start()
             idx += numPixels
@@ -422,7 +430,7 @@ class PseudoLensFlareWidget(QWidget):
         return bytes(newData)
 
     # Use Krita's built-in filters after everything else
-    def postFilter(self, app, doc, node):
+    def postFilter(self, app, doc, node, colorData):
         blurFilter = app.filter("blur")
         blurConfig = blurFilter.configuration()
         blurConfig.setProperty("halfWidth", self.blurStrength * doc.width())

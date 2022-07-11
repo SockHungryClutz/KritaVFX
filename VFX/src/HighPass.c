@@ -6,46 +6,21 @@
 #include <stdlib.h>
 #include "HighPass.h"
 
-Pixel ApplyPowerOnePixel(
-    Pixel power,
-    Pixel* inColor)
-{
-    double outVec[3];
-    Pixel outColor;
-    outVec[0] = inColor->blue * power.blue;
-    outVec[1] = inColor->green * power.green;
-    outVec[2] = inColor->red * power.red;
-    if (outVec[0] < 0) outVec[0] = 0;
-    else if (outVec[0] > 255) outVec[0] = 255;
-    if (outVec[1] < 0) outVec[1] = 0;
-    else if (outVec[1] > 255) outVec[1] = 255;
-    if (outVec[2] < 0) outVec[2] = 0;
-    else if (outVec[2] > 255) outVec[2] = 255;
-    outColor.blue = (unsigned char)outVec[0];
-    outColor.green = (unsigned char)outVec[1];
-    outColor.red = (unsigned char)outVec[2];
-    outColor.alpha = inColor->alpha;
-    return outColor;
-}
-
 void ApplyPower(
     long long start,
     long long n,
-    Pixel power,
+    int power,
     Coords imgSize,
     void* imgData,
-    void* outData)
+    void* outData,
+    ColorData colorData)
 {
-    Pixel* pixelData = (Pixel*)imgData;
-    Pixel* pixelOutData = (Pixel*)outData;
-
     for (long long i = start; i < start + n; i++)
     {
-        Pixel outPixel = ApplyPowerOnePixel(power, &(pixelData[i]));
-        pixelOutData[i].blue = outPixel.blue;
-        pixelOutData[i].green = outPixel.green;
-        pixelOutData[i].red = outPixel.red;
-        pixelOutData[i].alpha = outPixel.alpha;
+        Pixel outColor = GetColorAtIdx(i, imgSize.x, imgData, colorData);
+        outColor = ScalePixel(outColor, power);
+        ClampToColorSpace(outColor, colorData);
+        WritePixel(i, outColor, outData, colorData);
     }
 }
 
@@ -55,30 +30,43 @@ void ApplyHighPass(
     int threshold,
     Coords imgSize,
     void* imgData,
-    void* outData)
+    void* outData,
+    ColorData colorData)
 {
-    Pixel* pixelData = (Pixel*)imgData;
-    Pixel* pixelOutData = (Pixel*)outData;
-    double outVec[3];
-    double scale = 255 / (256 - threshold);
+    Pixel outVec = {0, 0, 0, 0, 0};
+    double max = GetColorSpaceMax(colorData);
+    double scaledThresh = ((double)threshold / 255.0) * max;
+    double scale = max / ((max + 1) - scaledThresh);
+    double halfThresh = scaledThresh / 2.0;
+    Pixel threshVect = {scaledThresh, scaledThresh, scaledThresh, scaledThresh, 0};
+    Pixel halfThreshVect = {halfThresh, halfThresh, halfThresh, halfThresh, 0};
 
     for (long long i = start; i < start + n; i++)
     {
         // nothing technical, subtract threshold from each color channel,
         // scale, clamp, then write to output
-        outVec[0] = (pixelData[i].blue - threshold) * scale;
-        outVec[1] = (pixelData[i].green - threshold) * scale;
-        outVec[2] = (pixelData[i].red - threshold) * scale;
-        if (outVec[0] < 0) outVec[0] = 0;
-        else if (outVec[0] > 255) outVec[0] = 255;
-        if (outVec[1] < 0) outVec[1] = 0;
-        else if (outVec[1] > 255) outVec[1] = 255;
-        if (outVec[2] < 0) outVec[2] = 0;
-        else if (outVec[2] > 255) outVec[2] = 255;
-        pixelOutData[i].blue = (unsigned char)outVec[0];
-        pixelOutData[i].green = (unsigned char)outVec[1];
-        pixelOutData[i].red = (unsigned char)outVec[2];
-        // TODO: should this always be 255? maybe parameterize?
-        pixelOutData[i].alpha = pixelData[i].alpha;
+        Pixel originalVect = GetColorAtIdx(i, imgSize.x, imgData, colorData);
+        switch (colorData.colorModel)
+        {
+            case CMYKA:
+                outVec = AddPixel(originalVect, threshVect);
+            case RGBA:
+            case XYZA:
+            case GRAYA:
+                outVec = SubPixel(originalVect, threshVect);
+                outVec = ScalePixel(outVec, scale);
+                break;
+            case LABA:
+            case YCbCrA:
+                outVec = ScalePixel(originalVect, scaledThresh);
+                outVec = AddPixel(outVec, halfThreshVect);
+                outVec.l = (originalVect.l - scaledThresh) * scale;
+                break;
+            default:
+                break;
+        }
+        outVec.a = originalVect.a;
+        ClampToColorSpace(outVec, colorData);
+        WritePixel(i, outVec, outData, colorData);
     }
 }

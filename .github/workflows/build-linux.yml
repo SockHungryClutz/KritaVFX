@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v2
       - run: sudo apt-get install gcc
       - name: build-x64
-        run: gcc -shared -o VFXLib_NIX64.so -fPIC VFXWrapper.c LensFlare.c HighPass.c ChromaticAberration.c Utils.c
+        run: gcc -shared -Ofast -o VFXLib_NIX64.so -fPIC VFXWrapper.c LensDirt.c LensFlare.c HighPass.c ChromaticAberration.c Utils.c
         working-directory: ${{env.working-directory}}
       - uses: actions/upload-artifact@v2
         with:

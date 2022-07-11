@@ -5,8 +5,9 @@
 
 #include "Utils.h"
 #include "ChromaticAberration.h"
-#include "LensFlare.h"
 #include "HighPass.h"
+#include "LensDirt.h"
+#include "LensFlare.h"
 
 void VFXLinearAberration(
     long long start,
@@ -14,9 +15,10 @@ void VFXLinearAberration(
     LinearFilterData filterData,
     Coords imgSize,
     void* imgData,
-    void* outData)
+    void* outData,
+    ColorData colorData)
 {
-    ApplyLinearAberration(start, n, filterData, imgSize, imgData, outData);
+    ApplyLinearAberration(start, n, filterData, imgSize, imgData, outData, colorData);
 }
 
 void VFXRadialAberration(
@@ -25,9 +27,10 @@ void VFXRadialAberration(
     RadialFilterData filterData,
     Coords imgSize,
     void* imgData,
-    void* outData)
+    void* outData,
+    ColorData colorData)
 {
-    ApplyRadialAberration(start, n, filterData, imgSize, imgData, outData);
+    ApplyRadialAberration(start, n, filterData, imgSize, imgData, outData, colorData);
 }
 
 void VFXPsuedoLensFlare(
@@ -36,20 +39,22 @@ void VFXPsuedoLensFlare(
     LensFlareFilterData filterData,
     Coords imgSize,
     void* imgData,
-    void* outData)
+    void* outData,
+    ColorData colorData)
 {
-    ApplyPsuedoLensFlare(start, n, filterData, imgSize, imgData, outData);
+    ApplyPsuedoLensFlare(start, n, filterData, imgSize, imgData, outData, colorData);
 }
 
 void VFXPower(
     long long start,
     long long n,
-    Pixel power,
+    int power,
     Coords imgSize,
     void* imgData,
-    void* outData)
+    void* outData,
+    ColorData colorData)
 {
-    ApplyPower(start, n, power, imgSize, imgData, outData);
+    ApplyPower(start, n, power, imgSize, imgData, outData, colorData);
 }
 
 void VFXHighPass(
@@ -58,7 +63,32 @@ void VFXHighPass(
     int threshold,
     Coords imgSize,
     void* imgData,
+    void* outData,
+    ColorData colorData)
+{
+    ApplyHighPass(start, n, threshold, imgSize, imgData, outData, colorData);
+}
+
+void VFXCreateDirtShapes(
+    long long start,
+    long long n,
+    LensDirtFilterData filterData,
+    Coords imgSize,
+    unsigned int seed,
     void* outData)
 {
-    ApplyHighPass(start, n, threshold, imgSize, imgData, outData);
+    CreateDirtShapes(start, n, filterData, imgSize, seed, outData);
+}
+
+void VFXRenderLensDirt(
+    long long start,
+    long long n,
+    long long numShapes,
+    LensDirtFilterData filterData,
+    Coords imgSize,
+    void* shapes,
+    void* outData,
+    ColorData colorData)
+{
+    RenderLensDirt(start, n, numShapes, filterData, imgSize, shapes, outData, colorData);
 }

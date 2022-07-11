@@ -24,6 +24,7 @@ void ApplyPsuedoLensFlare(
     LensFlareFilterData filterData,
     Coords imgSize,
     void* imgData,
-    void* outData);
+    void* outData,
+    ColorData colorData);
 
 #endif // ifndef _LENSFLARE_H_
