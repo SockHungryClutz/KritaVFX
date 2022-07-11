@@ -23,8 +23,6 @@ class SettingsWidget(QWidget):
         vbox = QVBoxLayout()
         vbox.addWidget(self.threadInfo)
         vbox.addWidget(self.workThreads)
-        vbox.addWidget(self.testInfo)
-        vbox.addWidget(self.testSlide)
 
         self.setLayout(vbox)
         self.show()
