@@ -110,11 +110,10 @@ void RenderLensDirt(
 {
     float* shapeArray = (float*) shapes;
     unsigned int floatsPerEntry = (filterData.shape * 2) + 2; // pair of points per side + 2 for other data
-    long colorMax = GetColorSpaceMax(colorData);
+    double colorMax = GetColorSpaceMax(colorData);
     for (long long i = start; i < n + start; i++)
     {
-        long maxval = GetColorSpaceMax(colorData);
-        Pixel color = {maxval,maxval,maxval,maxval,0};
+        Pixel color = {colorMax,colorMax,colorMax,colorMax,0};
         long long x = i % imgSize.x;
         long long y = i / imgSize.x;
         for (long long j = 0; j < numShapes; j++)

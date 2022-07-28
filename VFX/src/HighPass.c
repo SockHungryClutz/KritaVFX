@@ -19,7 +19,7 @@ void ApplyPower(
     {
         Pixel outColor = GetColorAtIdx(i, imgSize.x, imgData, colorData);
         outColor = ScalePixel(outColor, power);
-        ClampToColorSpace(outColor, colorData);
+        outColor = ClampToColorSpace(outColor, colorData);
         WritePixel(i, outColor, outData, colorData);
     }
 }
@@ -66,7 +66,7 @@ void ApplyHighPass(
                 break;
         }
         outVec.a = originalVect.a;
-        ClampToColorSpace(outVec, colorData);
+        outVec = ClampToColorSpace(outVec, colorData);
         WritePixel(i, outVec, outData, colorData);
     }
 }

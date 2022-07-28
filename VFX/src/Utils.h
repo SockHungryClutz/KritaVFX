@@ -121,9 +121,9 @@ void WritePixel(
     ColorData colorData);
 
 // Guess the maximum value for a color space
-long GetColorSpaceMax(ColorData colorData);
+double GetColorSpaceMax(ColorData colorData);
 
 // Clamp a vector to the current color space
-void ClampToColorSpace(Pixel pix, ColorData colorData);
+Pixel ClampToColorSpace(Pixel pix, ColorData colorData);
 
 #endif // ifndef _UTILS_H_

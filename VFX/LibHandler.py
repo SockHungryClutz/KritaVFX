@@ -67,7 +67,7 @@ def TranslateColorData(colorModel, colorDepth):
     elif colorDepth == "U16":
         depth = 1
     elif colorDepth == "F32":
-        depth == 2
+        depth = 2
     else:
         return None
     return ColorData(mod, depth)

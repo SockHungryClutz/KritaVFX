@@ -94,7 +94,7 @@ void ApplyPsuedoLensFlare(
         baseColor = AddPixel(baseColor, haloSample);
         // Power, clamp, then return
         baseColor = ScalePixel(baseColor, filterData.power);
-        ClampToColorSpace(baseColor, colorData);
+        baseColor = ClampToColorSpace(baseColor, colorData);
         baseColor.a = GetColorSpaceMax(colorData);
         WritePixel(i, baseColor, outData, colorData);
 

@@ -67,7 +67,7 @@ void ApplyLinearAberration(
         // Do the thing
         outVec = ApplyOnePixel(xy, vec, imgSize, imgData, colorData, filterData.biFilter);
         // There's no way this could happen, but just in case...
-        ClampToColorSpace(outVec, colorData);
+        outVec = ClampToColorSpace(outVec, colorData);
         WritePixel(i, outVec, outData, colorData);
 
         // Increment x
@@ -134,7 +134,7 @@ void ApplyRadialAberration(
             // Do the thing
             outVec = ApplyOnePixel(xy, displace, imgSize, imgData, colorData, filterData.biFilter);
             // There's no way this could happen, but just in case...
-            ClampToColorSpace(outVec, colorData);
+            outVec = ClampToColorSpace(outVec, colorData);
             WritePixel(i, outVec, outData, colorData);
         }
 

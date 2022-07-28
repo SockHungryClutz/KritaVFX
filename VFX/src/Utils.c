@@ -384,7 +384,7 @@ void WritePixel(
 }
 
 // Guess the maximum value for a color space
-long GetColorSpaceMax(ColorData colorData)
+double GetColorSpaceMax(ColorData colorData)
 {
     switch (colorData.colorDepth)
     {
@@ -420,17 +420,19 @@ long GetColorSpaceMax(ColorData colorData)
 }
 
 // Clamp a vector to the current color space
-void ClampToColorSpace(Pixel pix, ColorData colorData)
+Pixel ClampToColorSpace(Pixel pix, ColorData colorData)
 {
-    long max = GetColorSpaceMax(colorData);
-    if (pix.r < 0) pix.r = 0;
-    else if (pix.r > max) pix.r = max;
-    if (pix.b < 0) pix.b = 0;
-    else if (pix.b > max) pix.b = max;
-    if (pix.o < 0) pix.o = 0;
-    else if (pix.o > max) pix.o = max;
-    if (pix.l < 0) pix.l = 0;
-    else if (pix.l > max) pix.l = max;
-    if (pix.a < 0) pix.a = 0;
-    else if (pix.a > max) pix.a = max;
+    Pixel out = {pix.r,pix.b,pix.o,pix.l,pix.a};
+    double max = GetColorSpaceMax(colorData);
+    if (out.r < 0) out.r = 0;
+    else if (out.r > max) out.r = max;
+    if (out.b < 0) out.b = 0;
+    else if (out.b > max) out.b = max;
+    if (out.o < 0) out.o = 0;
+    else if (out.o > max) out.o = max;
+    if (out.l < 0) out.l = 0;
+    else if (out.l > max) out.l = max;
+    if (out.a < 0) out.a = 0;
+    else if (out.a > max) out.a = max;
+    return out;
 }
